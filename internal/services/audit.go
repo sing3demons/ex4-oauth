@@ -120,19 +120,19 @@ func (s *AuditService) LogSecurityEvent(ctx *AuditContext, eventType, descriptio
 	}
 
 	severity := s.determineSeverity(threatLevel)
-	
+
 	alert := &models.SecurityAlert{
-		AlertType:     eventType,
-		Severity:      severity,
-		UserID:        ctx.UserID,
-		IPAddress:     ctx.IPAddress,
-		UserAgent:     ctx.UserAgent,
-		ThreatLevel:   threatLevel,
-		Description:   description,
-		Evidence:      evidenceJSON,
-		TriggeredBy:   fmt.Sprintf("%s from %s", ctx.RequestPath, ctx.IPAddress),
-		CreatedAt:     time.Now(),
-		UpdatedAt:     time.Now(),
+		AlertType:   eventType,
+		Severity:    severity,
+		UserID:      ctx.UserID,
+		IPAddress:   ctx.IPAddress,
+		UserAgent:   ctx.UserAgent,
+		ThreatLevel: threatLevel,
+		Description: description,
+		Evidence:    evidenceJSON,
+		TriggeredBy: fmt.Sprintf("%s from %s", ctx.RequestPath, ctx.IPAddress),
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
 	}
 
 	return s.repo.CreateSecurityAlert(alert)
@@ -189,7 +189,7 @@ func (s *AuditService) ResolveSecurityAlert(alertID uint, resolvedBy uint, resol
 // GenerateComplianceReport generates a compliance report
 func (s *AuditService) GenerateComplianceReport(reportType, period string, generatedBy uint) (*models.ComplianceReport, error) {
 	startDate, endDate := s.parsePeriod(period)
-	
+
 	complianceData, err := s.repo.GetComplianceData(reportType, startDate, endDate)
 	if err != nil {
 		return nil, err
@@ -246,7 +246,7 @@ func (s *AuditService) GetHighRiskActivity(limit, offset int) ([]*models.AuditLo
 func (s *AuditService) CreateAuditContextFromGin(c *gin.Context) *AuditContext {
 	userID := s.getUserIDFromContext(c)
 	sessionID := s.getSessionIDFromContext(c)
-	
+
 	// Extract important headers
 	headers := make(map[string]string)
 	headers["Content-Type"] = c.GetHeader("Content-Type")
@@ -301,12 +301,12 @@ func (s *AuditService) assessAuthRiskLevel(action string, success bool, ipAddres
 	if !success {
 		return "medium"
 	}
-	
+
 	// Check for suspicious IP patterns
 	if s.isSuspiciousIP(ipAddress) {
 		return "high"
 	}
-	
+
 	return "low"
 }
 
@@ -354,12 +354,12 @@ func (s *AuditService) getClientIP(c *gin.Context) string {
 		ips := strings.Split(forwarded, ",")
 		return strings.TrimSpace(ips[0])
 	}
-	
+
 	// Check X-Real-IP header
 	if realIP := c.GetHeader("X-Real-IP"); realIP != "" {
 		return realIP
 	}
-	
+
 	// Use remote address
 	ip, _, err := net.SplitHostPort(c.Request.RemoteAddr)
 	if err != nil {
@@ -383,12 +383,12 @@ func (s *AuditService) getGeoLocation(ip string) string {
 	if ip == "127.0.0.1" || ip == "::1" {
 		return "localhost"
 	}
-	
+
 	// Check for private IP ranges
 	if s.isPrivateIP(ip) {
 		return "private_network"
 	}
-	
+
 	return "unknown"
 }
 
@@ -396,7 +396,7 @@ func (s *AuditService) parseDeviceInfo(userAgent string) string {
 	if userAgent == "" {
 		return "unknown"
 	}
-	
+
 	// Simple device detection
 	switch {
 	case strings.Contains(userAgent, "Mobile"):
@@ -414,12 +414,12 @@ func (s *AuditService) isPrivateIP(ip string) bool {
 		"172.16.0.0/12",
 		"192.168.0.0/16",
 	}
-	
+
 	parsedIP := net.ParseIP(ip)
 	if parsedIP == nil {
 		return false
 	}
-	
+
 	for _, cidr := range privateRanges {
 		_, network, err := net.ParseCIDR(cidr)
 		if err != nil {
@@ -429,7 +429,7 @@ func (s *AuditService) isPrivateIP(ip string) bool {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -441,7 +441,7 @@ func (s *AuditService) isSuspiciousIP(ip string) bool {
 
 func (s *AuditService) parsePeriod(period string) (time.Time, time.Time) {
 	now := time.Now()
-	
+
 	switch period {
 	case "last_24h":
 		return now.AddDate(0, 0, -1), now
@@ -470,7 +470,7 @@ func (s *AuditService) generateRecommendations(reportType string, data map[strin
 		"Update password policies",
 		"Monitor and log all administrative actions",
 	}
-	
+
 	result, _ := json.Marshal(recommendations)
 	return string(result)
 }
@@ -482,7 +482,7 @@ func (s *AuditService) generateRiskAssessment(data map[string]interface{}) strin
 		"access_risk":  "medium",
 		"compliance":   "satisfactory",
 	}
-	
+
 	result, _ := json.Marshal(assessment)
 	return string(result)
 }

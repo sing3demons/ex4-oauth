@@ -144,7 +144,7 @@ func (h *AuditHandler) SearchAuditLogs(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"data": logs,
+		"data":  logs,
 		"query": query,
 		"pagination": gin.H{
 			"total":  total,
@@ -184,7 +184,7 @@ func (h *AuditHandler) GetUserAuditTrail(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"data": logs,
+		"data":    logs,
 		"user_id": userID,
 		"pagination": gin.H{
 			"limit":  limit,
@@ -361,8 +361,8 @@ func (h *AuditHandler) ResolveSecurityAlert(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":   "Security alert resolved successfully",
-		"alert_id":  alertID,
+		"message":     "Security alert resolved successfully",
+		"alert_id":    alertID,
 		"resolved_by": resolvedBy,
 	})
 }
@@ -442,7 +442,7 @@ func (h *AuditHandler) CleanupOldLogs(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Old audit logs cleaned up successfully",
+		"message":        "Old audit logs cleaned up successfully",
 		"retention_days": requestBody.RetentionDays,
 	})
 }

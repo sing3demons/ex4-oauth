@@ -114,8 +114,8 @@ func setupRouter(cfg *config.Config, authHandler *handlers.AuthHandler, emailHan
 	router.Use(middleware.SecurityHeadersMiddleware())
 	router.Use(middleware.RequestIDMiddleware())
 	router.Use(middleware.EnhancedAPIRateLimitMiddleware()) // Add rate limiting
-	router.Use(auditMiddleware.LogRequest())               // Add audit logging
-	router.Use(auditMiddleware.LogSecurityEvents())        // Add security event logging
+	router.Use(auditMiddleware.LogRequest())                // Add audit logging
+	router.Use(auditMiddleware.LogSecurityEvents())         // Add security event logging
 
 	// Start cleanup for rate limiters
 	middleware.CleanupExpiredLimiters()

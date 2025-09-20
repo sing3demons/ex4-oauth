@@ -187,69 +187,69 @@ type SystemEvent struct {
 // AuditLog represents comprehensive audit trail for all system actions
 type AuditLog struct {
 	ID              uint      `json:"id" gorm:"primaryKey"`
-	UserID          *uint     `json:"user_id"`                                    // Optional: user who performed the action
-	SessionID       string    `json:"session_id"`                                 // Session identifier
-	Action          string    `json:"action" gorm:"not null"`                     // 'create', 'read', 'update', 'delete', 'login', 'logout', etc.
-	ResourceType    string    `json:"resource_type" gorm:"not null"`              // 'user', 'client', 'token', 'role', 'permission', etc.
-	ResourceID      string    `json:"resource_id"`                                // ID of the affected resource
-	OldValues       string    `json:"old_values" gorm:"type:text"`                // JSON of previous values
-	NewValues       string    `json:"new_values" gorm:"type:text"`                // JSON of new values
-	IPAddress       string    `json:"ip_address"`                                 // Client IP address
-	UserAgent       string    `json:"user_agent"`                                 // Client user agent
-	RequestMethod   string    `json:"request_method"`                             // HTTP method
-	RequestPath     string    `json:"request_path"`                               // API endpoint
-	RequestHeaders  string    `json:"request_headers" gorm:"type:text"`           // Important request headers
-	ResponseStatus  int       `json:"response_status"`                            // HTTP response status
-	Success         bool      `json:"success" gorm:"default:true"`                // Whether action was successful
-	ErrorMessage    string    `json:"error_message"`                              // Error details if failed
-	Duration        int64     `json:"duration"`                                   // Request duration in milliseconds
-	Severity        string    `json:"severity" gorm:"default:'info'"`             // 'info', 'warning', 'error', 'critical'
-	Category        string    `json:"category" gorm:"not null"`                   // 'authentication', 'authorization', 'data', 'security', 'system'
-	RiskLevel       string    `json:"risk_level" gorm:"default:'low'"`            // 'low', 'medium', 'high', 'critical'
-	ComplianceFlags string    `json:"compliance_flags"`                           // Compliance-related flags (GDPR, HIPAA, etc.)
-	GeoLocation     string    `json:"geo_location"`                               // Geographic location
-	DeviceInfo      string    `json:"device_info"`                                // Device information
-	CreatedAt       time.Time `json:"created_at"`                                 // Timestamp
-	User            *User     `json:"user,omitempty" gorm:"foreignKey:UserID"`    // User relationship
+	UserID          *uint     `json:"user_id"`                                 // Optional: user who performed the action
+	SessionID       string    `json:"session_id"`                              // Session identifier
+	Action          string    `json:"action" gorm:"not null"`                  // 'create', 'read', 'update', 'delete', 'login', 'logout', etc.
+	ResourceType    string    `json:"resource_type" gorm:"not null"`           // 'user', 'client', 'token', 'role', 'permission', etc.
+	ResourceID      string    `json:"resource_id"`                             // ID of the affected resource
+	OldValues       string    `json:"old_values" gorm:"type:text"`             // JSON of previous values
+	NewValues       string    `json:"new_values" gorm:"type:text"`             // JSON of new values
+	IPAddress       string    `json:"ip_address"`                              // Client IP address
+	UserAgent       string    `json:"user_agent"`                              // Client user agent
+	RequestMethod   string    `json:"request_method"`                          // HTTP method
+	RequestPath     string    `json:"request_path"`                            // API endpoint
+	RequestHeaders  string    `json:"request_headers" gorm:"type:text"`        // Important request headers
+	ResponseStatus  int       `json:"response_status"`                         // HTTP response status
+	Success         bool      `json:"success" gorm:"default:true"`             // Whether action was successful
+	ErrorMessage    string    `json:"error_message"`                           // Error details if failed
+	Duration        int64     `json:"duration"`                                // Request duration in milliseconds
+	Severity        string    `json:"severity" gorm:"default:'info'"`          // 'info', 'warning', 'error', 'critical'
+	Category        string    `json:"category" gorm:"not null"`                // 'authentication', 'authorization', 'data', 'security', 'system'
+	RiskLevel       string    `json:"risk_level" gorm:"default:'low'"`         // 'low', 'medium', 'high', 'critical'
+	ComplianceFlags string    `json:"compliance_flags"`                        // Compliance-related flags (GDPR, HIPAA, etc.)
+	GeoLocation     string    `json:"geo_location"`                            // Geographic location
+	DeviceInfo      string    `json:"device_info"`                             // Device information
+	CreatedAt       time.Time `json:"created_at"`                              // Timestamp
+	User            *User     `json:"user,omitempty" gorm:"foreignKey:UserID"` // User relationship
 }
 
 // SecurityAlert represents security-related alerts and threats
 type SecurityAlert struct {
-	ID              uint      `json:"id" gorm:"primaryKey"`
-	AlertType       string    `json:"alert_type" gorm:"not null"`                 // 'failed_login', 'suspicious_activity', 'rate_limit_exceeded', etc.
-	Severity        string    `json:"severity" gorm:"not null"`                   // 'low', 'medium', 'high', 'critical'
-	Status          string    `json:"status" gorm:"default:'open'"`               // 'open', 'investigating', 'resolved', 'false_positive'
-	UserID          *uint     `json:"user_id"`                                    // Optional: affected user
-	IPAddress       string    `json:"ip_address"`                                 // Source IP
-	UserAgent       string    `json:"user_agent"`                                 // User agent
-	ThreatLevel     int       `json:"threat_level" gorm:"default:1"`              // 1-10 threat scale
-	Description     string    `json:"description" gorm:"not null"`                // Alert description
-	Evidence        string    `json:"evidence" gorm:"type:text"`                  // JSON evidence data
-	Metadata        string    `json:"metadata" gorm:"type:text"`                  // Additional metadata
-	TriggeredBy     string    `json:"triggered_by"`                               // What triggered this alert
-	ResolvedBy      *uint     `json:"resolved_by"`                                // Admin who resolved
-	ResolvedAt      *time.Time `json:"resolved_at"`                               // Resolution timestamp
-	Resolution      string    `json:"resolution" gorm:"type:text"`                // Resolution notes
-	CreatedAt       time.Time `json:"created_at"`                                 // Creation timestamp
-	UpdatedAt       time.Time `json:"updated_at"`                                 // Last update
-	User            *User     `json:"user,omitempty" gorm:"foreignKey:UserID"`    // User relationship
-	ResolvedByUser  *User     `json:"resolved_by_user,omitempty" gorm:"foreignKey:ResolvedBy"` // Resolver relationship
+	ID             uint       `json:"id" gorm:"primaryKey"`
+	AlertType      string     `json:"alert_type" gorm:"not null"`                              // 'failed_login', 'suspicious_activity', 'rate_limit_exceeded', etc.
+	Severity       string     `json:"severity" gorm:"not null"`                                // 'low', 'medium', 'high', 'critical'
+	Status         string     `json:"status" gorm:"default:'open'"`                            // 'open', 'investigating', 'resolved', 'false_positive'
+	UserID         *uint      `json:"user_id"`                                                 // Optional: affected user
+	IPAddress      string     `json:"ip_address"`                                              // Source IP
+	UserAgent      string     `json:"user_agent"`                                              // User agent
+	ThreatLevel    int        `json:"threat_level" gorm:"default:1"`                           // 1-10 threat scale
+	Description    string     `json:"description" gorm:"not null"`                             // Alert description
+	Evidence       string     `json:"evidence" gorm:"type:text"`                               // JSON evidence data
+	Metadata       string     `json:"metadata" gorm:"type:text"`                               // Additional metadata
+	TriggeredBy    string     `json:"triggered_by"`                                            // What triggered this alert
+	ResolvedBy     *uint      `json:"resolved_by"`                                             // Admin who resolved
+	ResolvedAt     *time.Time `json:"resolved_at"`                                             // Resolution timestamp
+	Resolution     string     `json:"resolution" gorm:"type:text"`                             // Resolution notes
+	CreatedAt      time.Time  `json:"created_at"`                                              // Creation timestamp
+	UpdatedAt      time.Time  `json:"updated_at"`                                              // Last update
+	User           *User      `json:"user,omitempty" gorm:"foreignKey:UserID"`                 // User relationship
+	ResolvedByUser *User      `json:"resolved_by_user,omitempty" gorm:"foreignKey:ResolvedBy"` // Resolver relationship
 }
 
 // ComplianceReport represents compliance audit reports
 type ComplianceReport struct {
 	ID              uint      `json:"id" gorm:"primaryKey"`
-	ReportType      string    `json:"report_type" gorm:"not null"`                // 'gdpr', 'hipaa', 'sox', 'pci_dss', etc.
-	Period          string    `json:"period" gorm:"not null"`                     // Reporting period
-	GeneratedBy     uint      `json:"generated_by" gorm:"not null"`               // Admin who generated
-	Status          string    `json:"status" gorm:"default:'draft'"`              // 'draft', 'final', 'archived'
-	Summary         string    `json:"summary" gorm:"type:text"`                   // Executive summary
-	Findings        string    `json:"findings" gorm:"type:text"`                  // JSON findings data
-	Recommendations string    `json:"recommendations" gorm:"type:text"`           // Recommendations
-	RiskAssessment  string    `json:"risk_assessment" gorm:"type:text"`           // Risk assessment
-	AttachmentPath  string    `json:"attachment_path"`                            // Path to detailed report file
-	CreatedAt       time.Time `json:"created_at"`                                 // Creation timestamp
-	UpdatedAt       time.Time `json:"updated_at"`                                 // Last update
+	ReportType      string    `json:"report_type" gorm:"not null"`                     // 'gdpr', 'hipaa', 'sox', 'pci_dss', etc.
+	Period          string    `json:"period" gorm:"not null"`                          // Reporting period
+	GeneratedBy     uint      `json:"generated_by" gorm:"not null"`                    // Admin who generated
+	Status          string    `json:"status" gorm:"default:'draft'"`                   // 'draft', 'final', 'archived'
+	Summary         string    `json:"summary" gorm:"type:text"`                        // Executive summary
+	Findings        string    `json:"findings" gorm:"type:text"`                       // JSON findings data
+	Recommendations string    `json:"recommendations" gorm:"type:text"`                // Recommendations
+	RiskAssessment  string    `json:"risk_assessment" gorm:"type:text"`                // Risk assessment
+	AttachmentPath  string    `json:"attachment_path"`                                 // Path to detailed report file
+	CreatedAt       time.Time `json:"created_at"`                                      // Creation timestamp
+	UpdatedAt       time.Time `json:"updated_at"`                                      // Last update
 	GeneratedByUser User      `json:"generated_by_user" gorm:"foreignKey:GeneratedBy"` // Generator relationship
 }
 

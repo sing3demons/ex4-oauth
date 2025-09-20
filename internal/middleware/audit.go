@@ -56,10 +56,10 @@ func (m *AuditMiddleware) LogRequest() gin.HandlerFunc {
 
 		// Log the request
 		success := writer.status < 400
-		
+
 		if success {
-			err := m.auditService.LogAction(auditCtx, action, resourceType, resourceID, 
-				m.createRequestData(c, string(requestBody)), 
+			err := m.auditService.LogAction(auditCtx, action, resourceType, resourceID,
+				m.createRequestData(c, string(requestBody)),
 				m.createResponseData(writer))
 			if err != nil {
 				// Log error but don't fail the request
@@ -200,9 +200,9 @@ func (m *AuditMiddleware) extractResourceID(c *gin.Context) string {
 
 func (m *AuditMiddleware) createRequestData(c *gin.Context, body string) map[string]interface{} {
 	data := map[string]interface{}{
-		"method":      c.Request.Method,
-		"path":        c.Request.URL.Path,
-		"query":       c.Request.URL.RawQuery,
+		"method":       c.Request.Method,
+		"path":         c.Request.URL.Path,
+		"query":        c.Request.URL.RawQuery,
 		"content_type": c.GetHeader("Content-Type"),
 	}
 
@@ -293,7 +293,7 @@ func (m *AuditMiddleware) getUserIDFromResponse(c *gin.Context) *uint {
 func (m *AuditMiddleware) checkForSecurityThreats(c *gin.Context, auditCtx *services.AuditContext) {
 	// Check for suspicious patterns
 	userAgent := c.GetHeader("User-Agent")
-	
+
 	// Check for bot/scanner patterns
 	if m.isSuspiciousUserAgent(userAgent) {
 		evidence := map[string]interface{}{
@@ -301,8 +301,8 @@ func (m *AuditMiddleware) checkForSecurityThreats(c *gin.Context, auditCtx *serv
 			"path":       c.Request.URL.Path,
 			"method":     c.Request.Method,
 		}
-		
-		m.auditService.LogSecurityEvent(auditCtx, "suspicious_user_agent", 
+
+		m.auditService.LogSecurityEvent(auditCtx, "suspicious_user_agent",
 			"Suspicious user agent detected", 3, evidence)
 	}
 
@@ -315,7 +315,7 @@ func (m *AuditMiddleware) checkForSecurityThreats(c *gin.Context, auditCtx *serv
 					"value":     value,
 					"path":      c.Request.URL.Path,
 				}
-				
+
 				m.auditService.LogSecurityEvent(auditCtx, "sql_injection_attempt",
 					"Potential SQL injection detected", 7, evidence)
 			}
@@ -428,9 +428,9 @@ func (m *AuditMiddleware) hasSQLInjectionPattern(value string) bool {
 
 // Helper function for string contains check
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || 
-		(len(s) > len(substr) && (s[:len(substr)] == substr || s[len(s)-len(substr):] == substr || 
-		findSubstring(s, substr))))
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
+		(len(s) > len(substr) && (s[:len(substr)] == substr || s[len(s)-len(substr):] == substr ||
+			findSubstring(s, substr))))
 }
 
 func findSubstring(s, substr string) bool {
