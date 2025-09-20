@@ -169,8 +169,9 @@ func setupRouter(cfg *config.Config, authHandler *handlers.AuthHandler, emailHan
 			{
 				// OAuth2 Server endpoints
 				oauth.GET("/authorize", oauthHandler.Authorize)
+				oauth.POST("/login", oauthHandler.LoginAndAuthorize)
 				oauth.POST("/token", oauthHandler.Token)
-				oauth.POST("/consent", oauthHandler.Consent)
+				// oauth.POST("/consent", oauthHandler.Consent) // Disabled: using auto-approval instead
 				oauth.GET("/userinfo", oauthHandler.UserInfo)
 				oauth.GET("/.well-known/openid_configuration", oauthHandler.WellKnown)
 				oauth.GET("/.well-known/jwks.json", oauthHandler.JWKs)

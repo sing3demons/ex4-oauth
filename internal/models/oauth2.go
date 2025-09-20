@@ -15,12 +15,13 @@ type OAuth2Client struct {
 	ClientSecret    string         `json:"-" gorm:"not null"` // Never expose in JSON
 	Name            string         `json:"name" gorm:"not null"`
 	Description     string         `json:"description"`
-	RedirectURIs    []string       `json:"redirect_uris" gorm:"-"`        // Will be stored as string and converted
-	RedirectURIsStr string         `json:"-" gorm:"column:redirect_uris"` // JSON string in DB
-	Scopes          []string       `json:"scopes" gorm:"-"`               // Will be stored as string and converted
-	ScopesStr       string         `json:"-" gorm:"column:scopes"`        // JSON string in DB
-	GrantTypes      []string       `json:"grant_types" gorm:"-"`          // authorization_code, refresh_token
-	GrantTypesStr   string         `json:"-" gorm:"column:grant_types"`   // JSON string in DB
+	RedirectURIs    []string       `json:"redirect_uris" gorm:"-"`         // Will be stored as string and converted
+	RedirectURIsStr string         `json:"-" gorm:"column:redirect_uris"`  // JSON string in DB
+	Scopes          []string       `json:"scopes" gorm:"-"`                // Will be stored as string and converted
+	ScopesStr       string         `json:"-" gorm:"column:scopes"`         // JSON string in DB
+	GrantTypes      []string       `json:"grant_types" gorm:"-"`           // authorization_code, refresh_token
+	GrantTypesStr   string         `json:"-" gorm:"column:grant_types"`    // JSON string in DB
+	IsPublic        bool           `json:"is_public" gorm:"default:false"` // Public clients (no client secret required)
 	IsActive        bool           `json:"is_active" gorm:"default:true"`
 	CreatedAt       time.Time      `json:"created_at"`
 	UpdatedAt       time.Time      `json:"updated_at"`
@@ -62,7 +63,8 @@ func (c *OAuth2Client) BeforeCreate(tx *gorm.DB) error {
 	if c.ClientID == "" {
 		c.ClientID = generateRandomString(32)
 	}
-	if c.ClientSecret == "" {
+	// Only generate client secret for confidential clients
+	if !c.IsPublic && c.ClientSecret == "" {
 		c.ClientSecret = generateRandomString(64)
 	}
 	return nil
@@ -77,6 +79,7 @@ type OAuth2ClientRepository interface {
 	Delete(id uint) error
 	List(limit, offset int) ([]*OAuth2Client, error)
 	ValidateClientCredentials(clientID, clientSecret string) (*OAuth2Client, error)
+	ValidatePublicClient(clientID string) (*OAuth2Client, error)
 }
 
 // OAuth2AuthorizationCodeRepository defines the interface for authorization code management

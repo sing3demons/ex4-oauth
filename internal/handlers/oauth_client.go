@@ -24,11 +24,13 @@ func NewOAuth2ClientHandler(clientRepo models.OAuth2ClientRepository) *OAuth2Cli
 
 // CreateClientRequest represents OAuth2 client creation request
 type CreateClientRequest struct {
+	ClientID     string   `json:"client_id"` // Optional: custom client ID
 	Name         string   `json:"name" binding:"required"`
 	Description  string   `json:"description"`
 	RedirectURIs []string `json:"redirect_uris" binding:"required"`
 	Scopes       []string `json:"scopes"`
 	GrantTypes   []string `json:"grant_types"`
+	IsPublic     bool     `json:"is_public"` // Public client (no client secret required)
 }
 
 // ClientResponse represents OAuth2 client response
@@ -41,6 +43,7 @@ type ClientResponse struct {
 	RedirectURIs []string `json:"redirect_uris"`
 	Scopes       []string `json:"scopes"`
 	GrantTypes   []string `json:"grant_types"`
+	IsPublic     bool     `json:"is_public"`
 	IsActive     bool     `json:"is_active"`
 	CreatedAt    string   `json:"created_at"`
 }
@@ -75,7 +78,13 @@ func (h *OAuth2ClientHandler) CreateClient(c *gin.Context) {
 		RedirectURIs: req.RedirectURIs,
 		Scopes:       req.Scopes,
 		GrantTypes:   req.GrantTypes,
+		IsPublic:     req.IsPublic,
 		IsActive:     true,
+	}
+
+	// Set custom client ID if provided
+	if req.ClientID != "" {
+		client.ClientID = req.ClientID
 	}
 
 	if err := h.clientRepo.Create(client); err != nil {
@@ -93,6 +102,7 @@ func (h *OAuth2ClientHandler) CreateClient(c *gin.Context) {
 		RedirectURIs: client.RedirectURIs,
 		Scopes:       client.Scopes,
 		GrantTypes:   client.GrantTypes,
+		IsPublic:     client.IsPublic,
 		IsActive:     client.IsActive,
 		CreatedAt:    client.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}
@@ -140,6 +150,7 @@ func (h *OAuth2ClientHandler) GetClients(c *gin.Context) {
 			RedirectURIs: client.RedirectURIs,
 			Scopes:       client.Scopes,
 			GrantTypes:   client.GrantTypes,
+			IsPublic:     client.IsPublic,
 			IsActive:     client.IsActive,
 			CreatedAt:    client.CreatedAt.Format("2006-01-02T15:04:05Z"),
 		}
@@ -185,6 +196,7 @@ func (h *OAuth2ClientHandler) GetClient(c *gin.Context) {
 		RedirectURIs: client.RedirectURIs,
 		Scopes:       client.Scopes,
 		GrantTypes:   client.GrantTypes,
+		IsPublic:     client.IsPublic,
 		IsActive:     client.IsActive,
 		CreatedAt:    client.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}
@@ -220,6 +232,7 @@ func (h *OAuth2ClientHandler) UpdateClient(c *gin.Context) {
 		RedirectURIs []string `json:"redirect_uris"`
 		Scopes       []string `json:"scopes"`
 		GrantTypes   []string `json:"grant_types"`
+		IsPublic     *bool    `json:"is_public"` // Use pointer to distinguish between false and not provided
 		IsActive     *bool    `json:"is_active"` // Use pointer to distinguish between false and not provided
 	}
 
@@ -244,6 +257,9 @@ func (h *OAuth2ClientHandler) UpdateClient(c *gin.Context) {
 	if len(req.GrantTypes) > 0 {
 		client.GrantTypes = req.GrantTypes
 	}
+	if req.IsPublic != nil {
+		client.IsPublic = *req.IsPublic
+	}
 	if req.IsActive != nil {
 		client.IsActive = *req.IsActive
 	}
@@ -261,6 +277,7 @@ func (h *OAuth2ClientHandler) UpdateClient(c *gin.Context) {
 		RedirectURIs: client.RedirectURIs,
 		Scopes:       client.Scopes,
 		GrantTypes:   client.GrantTypes,
+		IsPublic:     client.IsPublic,
 		IsActive:     client.IsActive,
 		CreatedAt:    client.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}

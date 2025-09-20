@@ -119,6 +119,20 @@ func (r *OAuth2ClientRepository) ValidateClientCredentials(clientID, clientSecre
 	return &client, nil
 }
 
+// ValidatePublicClient validates public client ID (no secret required)
+func (r *OAuth2ClientRepository) ValidatePublicClient(clientID string) (*models.OAuth2Client, error) {
+	var client models.OAuth2Client
+	err := r.db.Where("client_id = ? AND is_public = ? AND is_active = ?", clientID, true, true).First(&client).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("invalid public client")
+		}
+		return nil, err
+	}
+	r.populateSlices(&client)
+	return &client, nil
+}
+
 // populateSlices converts JSON strings back to slices
 func (r *OAuth2ClientRepository) populateSlices(client *models.OAuth2Client) {
 	if client.RedirectURIsStr != "" {
