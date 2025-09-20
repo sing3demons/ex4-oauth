@@ -1,27 +1,31 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"ex4-oauth2/internal/auth"
 	"ex4-oauth2/internal/middleware"
 	"ex4-oauth2/internal/models"
+	"ex4-oauth2/internal/services"
 
 	"github.com/gin-gonic/gin"
 )
 
 // AuthHandler handles authentication related requests
 type AuthHandler struct {
-	userRepo   models.UserRepository
-	jwtService *auth.JWTService
+	userRepo     models.UserRepository
+	jwtService   *auth.JWTService
+	emailService *services.EmailService
 }
 
 // NewAuthHandler creates a new authentication handler
-func NewAuthHandler(userRepo models.UserRepository, jwtService *auth.JWTService) *AuthHandler {
+func NewAuthHandler(userRepo models.UserRepository, jwtService *auth.JWTService, emailService *services.EmailService) *AuthHandler {
 	return &AuthHandler{
-		userRepo:   userRepo,
-		jwtService: jwtService,
+		userRepo:     userRepo,
+		jwtService:   jwtService,
+		emailService: emailService,
 	}
 }
 
@@ -101,6 +105,13 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
+	// Send verification email
+	baseURL := fmt.Sprintf("%s://%s", getScheme(c), c.Request.Host)
+	if err := h.emailService.SendVerificationEmail(user, baseURL); err != nil {
+		// Log error but don't fail registration
+		fmt.Printf("Failed to send verification email: %v\n", err)
+	}
+
 	// Generate tokens
 	tokens, err := h.jwtService.GenerateTokenPair(user)
 	if err != nil {
@@ -113,7 +124,10 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		Tokens: tokens,
 	}
 
-	c.JSON(http.StatusCreated, response)
+	c.JSON(http.StatusCreated, gin.H{
+		"message": "Registration successful. Please check your email to verify your account.",
+		"data":    response,
+	})
 }
 
 // Login handles user login
@@ -361,4 +375,23 @@ func (h *AuthHandler) userToResponse(user *models.User) UserResponse {
 		EmailVerified: user.EmailVerified,
 		IsActive:      user.IsActive,
 	}
+}
+
+// getScheme determines if the request is HTTPS or HTTP
+func getScheme(c *gin.Context) string {
+	if c.Request.TLS != nil {
+		return "https"
+	}
+
+	// Check X-Forwarded-Proto header (common in reverse proxies)
+	if proto := c.GetHeader("X-Forwarded-Proto"); proto != "" {
+		return proto
+	}
+
+	// Check X-Forwarded-Ssl header
+	if ssl := c.GetHeader("X-Forwarded-Ssl"); ssl == "on" {
+		return "https"
+	}
+
+	return "http"
 }
