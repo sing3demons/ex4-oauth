@@ -287,3 +287,31 @@ type AuditRepository interface {
 	GetComplianceData(reportType string, startDate, endDate time.Time) (map[string]interface{}, error)
 	SearchAuditLogs(query string, filters map[string]interface{}, limit, offset int) ([]*AuditLog, int64, error)
 }
+
+// TokenIntrospectionRequest represents OAuth2 token introspection request
+type TokenIntrospectionRequest struct {
+	Token         string `json:"token" form:"token" binding:"required"`
+	TokenTypeHint string `json:"token_type_hint" form:"token_type_hint"` // "access_token" or "refresh_token"
+}
+
+// TokenIntrospectionResponse represents OAuth2 token introspection response (RFC 7662)
+type TokenIntrospectionResponse struct {
+	Active    bool     `json:"active"`               // Required: whether the token is active
+	Scope     string   `json:"scope,omitempty"`      // Space-separated list of scopes
+	ClientID  string   `json:"client_id,omitempty"`  // Client identifier
+	Username  string   `json:"username,omitempty"`   // Human-readable identifier for the resource owner
+	TokenType string   `json:"token_type,omitempty"` // Type of token (e.g., "Bearer")
+	Exp       int64    `json:"exp,omitempty"`        // Expiration time (Unix timestamp)
+	Iat       int64    `json:"iat,omitempty"`        // Issued at time (Unix timestamp)
+	Nbf       int64    `json:"nbf,omitempty"`        // Not before time (Unix timestamp)
+	Sub       string   `json:"sub,omitempty"`        // Subject identifier
+	Aud       []string `json:"aud,omitempty"`        // Audience
+	Iss       string   `json:"iss,omitempty"`        // Issuer
+	Jti       string   `json:"jti,omitempty"`        // JWT ID
+
+	// Extended fields for our implementation
+	UserID   uint   `json:"user_id,omitempty"`
+	Email    string `json:"email,omitempty"`
+	Role     string `json:"role,omitempty"`
+	Provider string `json:"provider,omitempty"`
+}

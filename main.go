@@ -71,11 +71,15 @@ func main() {
 	// Setup audit service
 	auditService := services.NewAuditService(db)
 
+	// Setup introspection service
+	introspectionService := services.NewIntrospectionService(userRepo, refreshTokenRepo, auditService)
+
 	// Setup handlers
 	authHandler := handlers.NewAuthHandler(userRepo, jwtService, emailService)
 	emailHandler := handlers.NewEmailHandler(emailService, userRepo)
 	adminHandler := handlers.NewAdminHandler(adminService, userRepo)
 	auditHandler := handlers.NewAuditHandler(auditService)
+	introspectionHandler := handlers.NewIntrospectionHandler(introspectionService)
 	oauthHandler := handlers.NewOAuthHandler(
 		userRepo,
 		clientRepo,
@@ -90,7 +94,7 @@ func main() {
 	auditMiddleware := middleware.NewAuditMiddleware(auditService)
 
 	// Setup router
-	router := setupRouter(cfg, authHandler, emailHandler, adminHandler, auditHandler, oauthHandler, oauthClientHandler, jwtService, userRepo, auditMiddleware)
+	router := setupRouter(cfg, authHandler, emailHandler, adminHandler, auditHandler, introspectionHandler, oauthHandler, oauthClientHandler, jwtService, userRepo, auditMiddleware)
 
 	// Start server
 	log.Printf("Server starting on %s", cfg.GetServerAddress())
@@ -99,7 +103,7 @@ func main() {
 	}
 }
 
-func setupRouter(cfg *config.Config, authHandler *handlers.AuthHandler, emailHandler *handlers.EmailHandler, adminHandler *handlers.AdminHandler, auditHandler *handlers.AuditHandler, oauthHandler *handlers.OAuthHandler, oauthClientHandler *handlers.OAuth2ClientHandler, jwtService *auth.JWTService, userRepo models.UserRepository, auditMiddleware *middleware.AuditMiddleware) *gin.Engine {
+func setupRouter(cfg *config.Config, authHandler *handlers.AuthHandler, emailHandler *handlers.EmailHandler, adminHandler *handlers.AdminHandler, auditHandler *handlers.AuditHandler, introspectionHandler *handlers.IntrospectionHandler, oauthHandler *handlers.OAuthHandler, oauthClientHandler *handlers.OAuth2ClientHandler, jwtService *auth.JWTService, userRepo models.UserRepository, auditMiddleware *middleware.AuditMiddleware) *gin.Engine {
 	// Set Gin mode
 	if cfg.IsProduction() {
 		gin.SetMode(gin.ReleaseMode)
@@ -190,6 +194,17 @@ func setupRouter(cfg *config.Config, authHandler *handlers.AuthHandler, emailHan
 			clients.DELETE("/:id", oauthClientHandler.DeleteClient)
 		}
 
+		// OAuth2 Token Introspection & Revocation (RFC 7662 & RFC 7009)
+		oauth2 := api.Group("/oauth2")
+		{
+			// Token Introspection (RFC 7662) - requires client authentication
+			oauth2.POST("/introspect", introspectionHandler.IntrospectToken)
+			// Token Revocation (RFC 7009) - requires client authentication
+			oauth2.POST("/revoke", introspectionHandler.RevokeToken)
+			// Token Info (non-standard endpoint for debugging)
+			oauth2.GET("/tokeninfo", introspectionHandler.GetTokenInfo)
+		}
+
 		// Email management routes (protected)
 		email := api.Group("/email")
 		email.Use(middleware.AuthMiddleware(jwtService))
@@ -212,6 +227,12 @@ func setupRouter(cfg *config.Config, authHandler *handlers.AuthHandler, emailHan
 			admin.DELETE("/users/:id", adminHandler.DeleteUser)
 			admin.POST("/cleanup-logs", adminHandler.CleanupLogs)
 			admin.GET("/system-info", adminHandler.GetSystemInfo)
+
+			// Token management routes
+			tokens := admin.Group("/tokens")
+			{
+				tokens.GET("/stats/:userID", introspectionHandler.GetTokenUsageStats)
+			}
 
 			// Audit & Compliance routes
 			audit := admin.Group("/audit")
@@ -254,6 +275,8 @@ func setupRouter(cfg *config.Config, authHandler *handlers.AuthHandler, emailHan
 					"Client Management",
 					"ID Token Generation",
 					"Rate Limiting",
+					"Token Introspection (RFC 7662)",
+					"Token Revocation (RFC 7009)",
 				},
 				"endpoints": gin.H{
 					"auth": gin.H{
@@ -284,6 +307,11 @@ func setupRouter(cfg *config.Config, authHandler *handlers.AuthHandler, emailHan
 						"get":    "GET /api/oauth2/clients/:id",
 						"update": "PUT /api/oauth2/clients/:id",
 						"delete": "DELETE /api/oauth2/clients/:id",
+					},
+					"token_introspection": gin.H{
+						"introspect": "POST /api/oauth2/introspect",
+						"revoke":     "POST /api/oauth2/revoke",
+						"tokeninfo":  "GET /api/oauth2/tokeninfo",
 					},
 					"users": gin.H{
 						"list": "GET /api/users",
