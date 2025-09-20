@@ -46,11 +46,11 @@ func (rl *RateLimiter) Allow() bool {
 	defer rl.mutex.Unlock()
 
 	now := time.Now()
-	
+
 	// Refill tokens based on time elapsed
 	elapsed := now.Sub(rl.lastRefill)
 	tokensToAdd := int(elapsed / rl.refillRate)
-	
+
 	if tokensToAdd > 0 {
 		rl.tokens += tokensToAdd
 		if rl.tokens > rl.maxTokens {
@@ -95,11 +95,11 @@ func (crl *ClientRateLimiters) GetRateLimiter(clientID string, maxTokens int, re
 // TokenBucketRateLimitMiddleware creates a rate limiting middleware with token bucket algorithm
 func TokenBucketRateLimitMiddleware(maxRequests int, window time.Duration) gin.HandlerFunc {
 	refillRate := window / time.Duration(maxRequests)
-	
+
 	return func(c *gin.Context) {
 		// Get client identifier (IP address)
 		clientID := c.ClientIP()
-		
+
 		// Special handling for localhost/development
 		if clientID == "::1" || clientID == "127.0.0.1" {
 			clientID = "localhost"
@@ -113,7 +113,7 @@ func TokenBucketRateLimitMiddleware(maxRequests int, window time.Duration) gin.H
 			c.Header("X-RateLimit-Limit", string(rune(maxRequests)))
 			c.Header("X-RateLimit-Remaining", "0")
 			c.Header("X-RateLimit-Reset", string(rune(time.Now().Add(refillRate).Unix())))
-			
+
 			c.JSON(http.StatusTooManyRequests, gin.H{
 				"error":             "rate_limit_exceeded",
 				"error_description": "Too many requests. Please try again later.",
@@ -125,7 +125,7 @@ func TokenBucketRateLimitMiddleware(maxRequests int, window time.Duration) gin.H
 
 		// Set rate limit headers
 		c.Header("X-RateLimit-Limit", string(rune(maxRequests)))
-		
+
 		c.Next()
 	}
 }
@@ -155,18 +155,18 @@ func CleanupExpiredLimiters() {
 		for range ticker.C {
 			globalLimiters.mutex.Lock()
 			now := time.Now()
-			
+
 			for clientID, limiter := range globalLimiters.limiters {
 				limiter.mutex.Lock()
-				
+
 				// Remove limiters that haven't been used for 10 minutes
 				if now.Sub(limiter.lastRefill) > 10*time.Minute {
 					delete(globalLimiters.limiters, clientID)
 				}
-				
+
 				limiter.mutex.Unlock()
 			}
-			
+
 			globalLimiters.mutex.Unlock()
 		}
 	}()
@@ -176,10 +176,10 @@ func CleanupExpiredLimiters() {
 func GetRateLimitStatus() map[string]interface{} {
 	globalLimiters.mutex.RLock()
 	defer globalLimiters.mutex.RUnlock()
-	
+
 	status := make(map[string]interface{})
 	status["active_limiters"] = len(globalLimiters.limiters)
-	
+
 	clientStatus := make(map[string]interface{})
 	for clientID, limiter := range globalLimiters.limiters {
 		limiter.mutex.Lock()
@@ -191,6 +191,6 @@ func GetRateLimitStatus() map[string]interface{} {
 		limiter.mutex.Unlock()
 	}
 	status["clients"] = clientStatus
-	
+
 	return status
 }

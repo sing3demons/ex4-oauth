@@ -27,39 +27,39 @@ type JWTClaims struct {
 // IDTokenClaims represents OIDC ID Token claims
 type IDTokenClaims struct {
 	// Standard OIDC claims
-	Subject           string `json:"sub"`                     // Subject identifier
-	Audience          string `json:"aud"`                     // Client ID
-	Issuer            string `json:"iss"`                     // Issuer identifier
-	IssuedAt          int64  `json:"iat"`                     // Issued at time
-	ExpiresAt         int64  `json:"exp"`                     // Expiration time
-	AuthTime          int64  `json:"auth_time,omitempty"`     // Authentication time
-	Nonce             string `json:"nonce,omitempty"`         // Nonce from authorization request
-	
+	Subject   string `json:"sub"`                 // Subject identifier
+	Audience  string `json:"aud"`                 // Client ID
+	Issuer    string `json:"iss"`                 // Issuer identifier
+	IssuedAt  int64  `json:"iat"`                 // Issued at time
+	ExpiresAt int64  `json:"exp"`                 // Expiration time
+	AuthTime  int64  `json:"auth_time,omitempty"` // Authentication time
+	Nonce     string `json:"nonce,omitempty"`     // Nonce from authorization request
+
 	// Profile claims
-	Name              string `json:"name,omitempty"`          // Full name
-	GivenName         string `json:"given_name,omitempty"`    // First name
-	FamilyName        string `json:"family_name,omitempty"`   // Last name
-	MiddleName        string `json:"middle_name,omitempty"`   // Middle name
-	Nickname          string `json:"nickname,omitempty"`      // Nickname
+	Name              string `json:"name,omitempty"`               // Full name
+	GivenName         string `json:"given_name,omitempty"`         // First name
+	FamilyName        string `json:"family_name,omitempty"`        // Last name
+	MiddleName        string `json:"middle_name,omitempty"`        // Middle name
+	Nickname          string `json:"nickname,omitempty"`           // Nickname
 	PreferredUsername string `json:"preferred_username,omitempty"` // Username
-	Picture           string `json:"picture,omitempty"`       // Profile picture URL
-	Website           string `json:"website,omitempty"`       // Website URL
-	Gender            string `json:"gender,omitempty"`        // Gender
-	Birthdate         string `json:"birthdate,omitempty"`     // Birthdate
-	Zoneinfo          string `json:"zoneinfo,omitempty"`      // Timezone
-	Locale            string `json:"locale,omitempty"`        // Locale
-	UpdatedAt         int64  `json:"updated_at,omitempty"`    // Last update time
-	
+	Picture           string `json:"picture,omitempty"`            // Profile picture URL
+	Website           string `json:"website,omitempty"`            // Website URL
+	Gender            string `json:"gender,omitempty"`             // Gender
+	Birthdate         string `json:"birthdate,omitempty"`          // Birthdate
+	Zoneinfo          string `json:"zoneinfo,omitempty"`           // Timezone
+	Locale            string `json:"locale,omitempty"`             // Locale
+	UpdatedAt         int64  `json:"updated_at,omitempty"`         // Last update time
+
 	// Email claims
-	Email             string `json:"email,omitempty"`         // Email address
-	EmailVerified     bool   `json:"email_verified,omitempty"` // Email verification status
-	
+	Email         string `json:"email,omitempty"`          // Email address
+	EmailVerified bool   `json:"email_verified,omitempty"` // Email verification status
+
 	// Phone claims
-	PhoneNumber       string `json:"phone_number,omitempty"`  // Phone number
-	PhoneVerified     bool   `json:"phone_number_verified,omitempty"` // Phone verification status
-	
+	PhoneNumber   string `json:"phone_number,omitempty"`          // Phone number
+	PhoneVerified bool   `json:"phone_number_verified,omitempty"` // Phone verification status
+
 	// Address claim
-	Address           *AddressClaim `json:"address,omitempty"` // Address information
+	Address *AddressClaim `json:"address,omitempty"` // Address information
 }
 
 // AddressClaim represents OIDC address claim
@@ -293,16 +293,16 @@ func (j *JWTService) GenerateAccessToken(user *models.User) (string, error) {
 // GenerateIDToken generates an OIDC ID Token
 func (j *JWTService) GenerateIDToken(user *models.User, clientID, nonce string, authTime time.Time) (string, error) {
 	now := time.Now()
-	
+
 	claims := IDTokenClaims{
-		Subject:           fmt.Sprintf("%d", user.ID),
-		Audience:          clientID,
-		Issuer:            "ex4-oauth2",
-		IssuedAt:          now.Unix(),
-		ExpiresAt:         now.Add(j.accessTokenTTL).Unix(),
-		AuthTime:          authTime.Unix(),
-		Nonce:             nonce,
-		
+		Subject:   fmt.Sprintf("%d", user.ID),
+		Audience:  clientID,
+		Issuer:    "ex4-oauth2",
+		IssuedAt:  now.Unix(),
+		ExpiresAt: now.Add(j.accessTokenTTL).Unix(),
+		AuthTime:  authTime.Unix(),
+		Nonce:     nonce,
+
 		// Profile information
 		Name:              user.FirstName + " " + user.LastName,
 		GivenName:         user.FirstName,
@@ -310,10 +310,10 @@ func (j *JWTService) GenerateIDToken(user *models.User, clientID, nonce string, 
 		PreferredUsername: user.Username,
 		Picture:           user.Avatar,
 		UpdatedAt:         user.UpdatedAt.Unix(),
-		
+
 		// Email information
-		Email:             user.Email,
-		EmailVerified:     user.EmailVerified,
+		Email:         user.Email,
+		EmailVerified: user.EmailVerified,
 	}
 
 	var token *jwt.Token
@@ -365,9 +365,9 @@ func (j *JWTService) GenerateOIDCTokenPair(user *models.User, clientID, nonce st
 // contains checks if a string contains a substring (helper function)
 func contains(s, substr string) bool {
 	return s == substr ||
-		   strings.HasPrefix(s, substr+" ") ||
-		   strings.HasSuffix(s, " "+substr) ||
-		   strings.Contains(s, " "+substr+" ")
+		strings.HasPrefix(s, substr+" ") ||
+		strings.HasSuffix(s, " "+substr) ||
+		strings.Contains(s, " "+substr+" ")
 }
 
 // GenerateRefreshToken generates a refresh token and stores it in database
