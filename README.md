@@ -808,6 +808,162 @@ CREATE TABLE security_alerts (
 - Version information
 - Security features overview
 
+## Real-time Notifications
+
+The OAuth2 server provides a comprehensive real-time notification system using WebSocket connections.
+
+### WebSocket Connection
+
+Connect to real-time notifications:
+
+```bash
+# Authenticated WebSocket connection
+curl --include \
+     --no-buffer \
+     --header "Connection: Upgrade" \
+     --header "Upgrade: websocket" \
+     --header "Sec-WebSocket-Key: SGVsbG8sIHdvcmxkIQ==" \
+     --header "Sec-WebSocket-Version: 13" \
+     --header "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+     http://localhost:8080/api/ws/connect
+
+# Anonymous WebSocket connection (limited features)
+curl --include \
+     --no-buffer \
+     --header "Connection: Upgrade" \
+     --header "Upgrade: websocket" \
+     --header "Sec-WebSocket-Key: SGVsbG8sIHdvcmxkIQ==" \
+     --header "Sec-WebSocket-Version: 13" \
+     http://localhost:8080/api/ws/public
+```
+
+### Notification Management
+
+Get user notifications:
+
+```bash
+curl -X GET "http://localhost:8080/api/notifications" \
+     -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+Mark notification as read:
+
+```bash
+curl -X PUT "http://localhost:8080/api/notifications/123/read" \
+     -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+Mark all notifications as read:
+
+```bash
+curl -X PUT "http://localhost:8080/api/notifications/read-all" \
+     -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+Get notification statistics:
+
+```bash
+curl -X GET "http://localhost:8080/api/notifications/stats" \
+     -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+### Admin Notifications
+
+Get admin notifications:
+
+```bash
+curl -X GET "http://localhost:8080/api/admin/notifications" \
+     -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
+```
+
+Get admin notification statistics:
+
+```bash
+curl -X GET "http://localhost:8080/api/admin/notifications/stats" \
+     -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
+```
+
+Test notification system:
+
+```bash
+curl -X POST "http://localhost:8080/api/admin/notifications/test" \
+     -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "type": "SECURITY_ALERT",
+       "message": "Test security alert",
+       "severity": "high"
+     }'
+```
+
+### WebSocket Message Format
+
+The WebSocket connection sends messages in the following format:
+
+```json
+{
+  "id": "notification_id",
+  "type": "SECURITY_ALERT",
+  "title": "Security Alert",
+  "message": "Multiple failed login attempts detected",
+  "severity": "high",
+  "channel": "security",
+  "user_id": "user123",
+  "metadata": {
+    "attempts": 5,
+    "ip": "192.168.1.100"
+  },
+  "created_at": "2023-12-01T10:00:00Z",
+  "expires_at": "2023-12-01T11:00:00Z"
+}
+```
+
+### Channel Subscriptions
+
+Subscribe to specific notification channels:
+
+```javascript
+// JavaScript WebSocket client example
+const ws = new WebSocket('ws://localhost:8080/api/ws/connect', [], {
+  headers: {
+    'Authorization': 'Bearer ' + accessToken
+  }
+});
+
+ws.onopen = function() {
+  // Subscribe to channels
+  ws.send(JSON.stringify({
+    action: 'subscribe',
+    channels: ['security', 'system', 'user']
+  }));
+};
+
+ws.onmessage = function(event) {
+  const notification = JSON.parse(event.data);
+  console.log('Received notification:', notification);
+};
+```
+
+### Notification Types
+
+The system supports various notification types:
+
+- **SECURITY_ALERT**: Security-related alerts (failed logins, suspicious activity)
+- **SYSTEM_NOTIFICATION**: System-wide announcements
+- **USER_NOTIFICATION**: User-specific notifications
+- **TOKEN_EXPIRY**: Token expiration warnings
+- **ADMIN_ALERT**: Administrative alerts
+- **AUDIT_ALERT**: Audit-related notifications
+- **COMPLIANCE_ALERT**: Compliance-related notifications
+
+### Security Features
+
+- **Authentication**: WebSocket connections require valid JWT tokens
+- **Channel-based Access**: Users only receive notifications for authorized channels
+- **Rate Limiting**: Prevents notification spam
+- **Message Encryption**: All WebSocket communications are secure
+- **Audit Integration**: All notifications are logged for audit purposes
+
 ## Development
 
 ### Project Structure

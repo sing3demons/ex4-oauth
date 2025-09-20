@@ -74,12 +74,23 @@ func main() {
 	// Setup introspection service
 	introspectionService := services.NewIntrospectionService(userRepo, refreshTokenRepo, auditService)
 
+	// Setup notification repository
+	notificationRepo := database.NewNotificationRepository(db.GetDB())
+
+	// Setup WebSocket and notification services
+	websocketService := services.NewWebSocketService(notificationRepo, auditService)
+	notificationService := services.NewNotificationService(notificationRepo, websocketService, auditService)
+
+	// Start WebSocket service
+	websocketService.Start()
+
 	// Setup handlers
 	authHandler := handlers.NewAuthHandler(userRepo, jwtService, emailService)
 	emailHandler := handlers.NewEmailHandler(emailService, userRepo)
 	adminHandler := handlers.NewAdminHandler(adminService, userRepo)
 	auditHandler := handlers.NewAuditHandler(auditService)
 	introspectionHandler := handlers.NewIntrospectionHandler(introspectionService)
+	websocketHandler := handlers.NewWebSocketHandler(websocketService, notificationService)
 	oauthHandler := handlers.NewOAuthHandler(
 		userRepo,
 		clientRepo,
@@ -94,7 +105,7 @@ func main() {
 	auditMiddleware := middleware.NewAuditMiddleware(auditService)
 
 	// Setup router
-	router := setupRouter(cfg, authHandler, emailHandler, adminHandler, auditHandler, introspectionHandler, oauthHandler, oauthClientHandler, jwtService, userRepo, auditMiddleware)
+	router := setupRouter(cfg, authHandler, emailHandler, adminHandler, auditHandler, introspectionHandler, websocketHandler, oauthHandler, oauthClientHandler, jwtService, userRepo, auditMiddleware)
 
 	// Start server
 	log.Printf("Server starting on %s", cfg.GetServerAddress())
@@ -103,7 +114,7 @@ func main() {
 	}
 }
 
-func setupRouter(cfg *config.Config, authHandler *handlers.AuthHandler, emailHandler *handlers.EmailHandler, adminHandler *handlers.AdminHandler, auditHandler *handlers.AuditHandler, introspectionHandler *handlers.IntrospectionHandler, oauthHandler *handlers.OAuthHandler, oauthClientHandler *handlers.OAuth2ClientHandler, jwtService *auth.JWTService, userRepo models.UserRepository, auditMiddleware *middleware.AuditMiddleware) *gin.Engine {
+func setupRouter(cfg *config.Config, authHandler *handlers.AuthHandler, emailHandler *handlers.EmailHandler, adminHandler *handlers.AdminHandler, auditHandler *handlers.AuditHandler, introspectionHandler *handlers.IntrospectionHandler, websocketHandler *handlers.WebSocketHandler, oauthHandler *handlers.OAuthHandler, oauthClientHandler *handlers.OAuth2ClientHandler, jwtService *auth.JWTService, userRepo models.UserRepository, auditMiddleware *middleware.AuditMiddleware) *gin.Engine {
 	// Set Gin mode
 	if cfg.IsProduction() {
 		gin.SetMode(gin.ReleaseMode)
@@ -234,6 +245,14 @@ func setupRouter(cfg *config.Config, authHandler *handlers.AuthHandler, emailHan
 				tokens.GET("/stats/:userID", introspectionHandler.GetTokenUsageStats)
 			}
 
+			// Admin notification routes
+			notifications := admin.Group("/notifications")
+			{
+				notifications.GET("", websocketHandler.GetAdminNotifications)
+				notifications.GET("/stats", websocketHandler.GetAdminNotificationStats)
+				notifications.POST("/test", websocketHandler.TestNotification)
+			}
+
 			// Audit & Compliance routes
 			audit := admin.Group("/audit")
 			{
@@ -247,6 +266,26 @@ func setupRouter(cfg *config.Config, authHandler *handlers.AuthHandler, emailHan
 				audit.POST("/compliance/reports", auditHandler.GenerateComplianceReport)
 				audit.POST("/cleanup", auditHandler.CleanupOldLogs)
 			}
+		}
+
+		// WebSocket endpoints
+		ws := api.Group("/ws")
+		{
+			// Authenticated WebSocket connection
+			ws.GET("/connect", middleware.AuthMiddleware(jwtService), websocketHandler.HandleWebSocketConnection)
+			// Anonymous WebSocket connection (limited)
+			ws.GET("/public", websocketHandler.HandleAnonymousWebSocket)
+		}
+
+		// User notification routes (protected)
+		notifications := api.Group("/notifications")
+		notifications.Use(middleware.AuthMiddleware(jwtService))
+		{
+			notifications.GET("", websocketHandler.GetNotifications)
+			notifications.GET("/stats", websocketHandler.GetNotificationStats)
+			notifications.PUT("/:id/read", websocketHandler.MarkNotificationAsRead)
+			notifications.PUT("/read-all", websocketHandler.MarkAllNotificationsAsRead)
+			notifications.DELETE("/:id", websocketHandler.DeleteNotification)
 		}
 
 		// API info
