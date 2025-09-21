@@ -131,7 +131,14 @@ func (h *OAuthHandler) Authorize(c *gin.Context) {
 		}
 	}
 
+	
 	if !authenticated {
+		if client.Consent != "" && client.Consent != "auto" {
+			// redirect to consent page
+			c.Redirect(http.StatusFound, fmt.Sprintf("/consent?client_id=%s&redirect_uri=%s&response_type=%s&scope=%s&state=%s&code_challenge=%s&code_challenge_method=%s&nonce=%s",
+				client.ID, req.RedirectURI, req.ResponseType, req.Scope, req.State, req.CodeChallenge, req.CodeChallengeMethod, req.Nonce))
+			return
+		}
 		// User is not authenticated, show login form
 		h.showLoginForm(c, &req)
 		return

@@ -21,6 +21,7 @@ type OAuth2Client struct {
 	IsPublic     bool      `json:"is_public" bson:"is_public"`     // Public clients (no client secret required)
 	IsActive     bool      `json:"is_active" bson:"is_active"`
 	CreatedAt    time.Time `json:"created_at" bson:"created_at"`
+	Consent      string    `json:"consent" bson:"consent"` // "auto", "manual"
 	UpdatedAt    time.Time `json:"updated_at" bson:"updated_at"`
 }
 

@@ -1,0 +1,157 @@
+### Variables
+@baseUrl = http://localhost:3001
+@oauthServer = http://localhost:8080
+
+### 1. Health Check
+GET {{baseUrl}}/health
+
+### 2. Get Application Info
+GET {{baseUrl}}/api/info
+
+### 3. Home Page (Check Auth Status)
+GET http://localhost:8080/api/auth/oauth/authorize?response_type=code&client_id=4xsmjvVypydAOUFZrDxwn12J-rWdFIYa&redirect_uri=http://localhost:3001/callback&scope=read&state=test123
+
+
+### 4. Start OAuth2 Login Flow
+# This will redirect to OAuth2 server authorization page
+GET {{baseUrl}}/auth/login
+
+### 5. OAuth2 Callback (Manual Test)
+# Note: This endpoint is normally called by OAuth2 server after user authorization
+# You need to get the 'code' and 'state' from the actual OAuth flow
+GET {{baseUrl}}/auth/callback?code=AUTHORIZATION_CODE_HERE&state=STATE_VALUE_HERE
+
+### 6. Get User Profile (Protected - requires authentication)
+# Note: You need to be logged in first via browser flow
+GET {{baseUrl}}/api/profile
+Cookie: connect.sid=SESSION_COOKIE_HERE
+
+### 7. Access Protected Resource (Protected - requires authentication)
+# Note: You need to be logged in first via browser flow
+GET {{baseUrl}}/api/protected
+Cookie: connect.sid=SESSION_COOKIE_HERE
+
+### 8. Logout
+POST {{baseUrl}}/auth/logout
+Cookie: connect.sid=SESSION_COOKIE_HERE
+
+###############################################
+### Browser-based Flow Test Instructions
+###############################################
+
+### Step 1: Start Login Flow
+# Open browser and go to: http://localhost:3001/auth/login
+# This will redirect you to OAuth2 server
+
+### Step 2: Login at OAuth2 Server
+# Login with credentials:
+# Username: admin@example.com
+# Password: password123
+
+### Step 3: Get Session Cookie
+# After successful login, check browser dev tools > Application > Cookies
+# Copy the 'connect.sid' cookie value
+
+### Step 4: Test Protected Endpoints
+# Use the session cookie in the requests above
+
+###############################################
+### Testing OAuth2 Server Integration
+###############################################
+
+### Check OAuth2 Server Health
+GET {{oauthServer}}/health
+
+### Get OAuth2 Server Endpoints
+GET {{oauthServer}}/api/endpoints
+
+### Get OIDC Discovery Document
+GET {{oauthServer}}/api/auth/oauth/.well-known/openid-configuration
+
+### OAuth2 Authorization URL (Manual Construction)
+# GET {{oauthServer}}/api/auth/oauth/authorize?response_type=code&client_id=4xsmjvVypydAOUFZrDxwn12J-rWdFIYa&redirect_uri=http://localhost:3001/auth/callback&scope=openid%20profile%20email&state=RANDOM_STATE&nonce=RANDOM_NONCE
+
+###############################################
+### Direct Token Testing (for debugging)
+###############################################
+
+### Exchange Authorization Code for Token (Manual)
+POST {{oauthServer}}/api/auth/oauth/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=authorization_code&code=AUTHORIZATION_CODE&redirect_uri=http://localhost:3001/auth/callback&client_id=4xsmjvVypydAOUFZrDxwn12J-rWdFIYa&client_secret=9mYxPS4p_G-LoxaYnT-szafwVoRwh_BLe9zh1TGcGBZgi0OJISppd4U12KK_2tsh
+
+### Get User Info with Access Token
+GET {{oauthServer}}/api/auth/oauth/userinfo
+Authorization: Bearer ACCESS_TOKEN_HERE
+
+### Refresh Token
+POST {{oauthServer}}/api/auth/oauth/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=refresh_token&refresh_token=REFRESH_TOKEN_HERE&client_id=4xsmjvVypydAOUFZrDxwn12J-rWdFIYa&client_secret=9mYxPS4p_G-LoxaYnT-szafwVoRwh_BLe9zh1TGcGBZgi0OJISppd4U12KK_2tsh
+
+###############################################
+### Complete Flow Test Script
+###############################################
+
+### Test 1: Application Status
+GET {{baseUrl}}/
+Accept: application/json
+
+###
+### Test 2: Login Redirect (will return HTML redirect)
+GET {{baseUrl}}/auth/login
+Accept: text/html
+
+###
+### Test 3: Check OAuth Server Discovery
+GET {{oauthServer}}/api/auth/oauth/.well-known/openid-configuration
+Accept: application/json
+
+###############################################
+### Error Cases Testing
+###############################################
+
+### Test Invalid State Parameter
+GET {{baseUrl}}/auth/callback?code=test&state=invalid_state
+
+### Test Missing Authorization Code
+GET {{baseUrl}}/auth/callback?state=valid_state
+
+### Test Access Protected Without Auth
+GET {{baseUrl}}/api/profile
+
+### Test Access Protected Without Auth
+GET {{baseUrl}}/api/protected
+
+###############################################
+### Curl Commands for Terminal Testing
+###############################################
+
+### Test with curl (copy these to terminal)
+
+# Health check
+# curl -i http://localhost:3001/health
+
+# App info
+# curl -i http://localhost:3001/api/info
+
+# Start login (will show redirect)
+# curl -i http://localhost:3001/auth/login
+
+# Test protected endpoint (will fail without session)
+# curl -i http://localhost:3001/api/profile
+
+# Test with session cookie (replace SESSION_COOKIE with actual value)
+# curl -i -H "Cookie: connect.sid=SESSION_COOKIE" http://localhost:3001/api/profile
+
+###############################################
+### Notes:
+###############################################
+
+# 1. The OAuth2 flow requires browser interaction for the authorization step
+# 2. Session cookies are httpOnly and secure, so they need to be extracted from browser
+# 3. For automated testing, consider implementing a test endpoint that bypasses OAuth
+# 4. The authorization code is single-use and expires quickly
+# 5. State parameter prevents CSRF attacks and must match between requests
