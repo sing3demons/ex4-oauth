@@ -253,8 +253,16 @@ func (h *OAuthHandler) UserInfo(c *gin.Context) {
 	}
 
 	user := accessToken.User
+	if user == nil {
+		user, err = h.userRepo.GetByID(accessToken.UserID)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid_token"})
+			return
+		}
+	}
+
 	userInfo := UserInfoResponse{
-		Sub:           fmt.Sprintf("%d", user.ID),
+		Sub:           fmt.Sprintf("%s", accessToken.ID),
 		Email:         user.Email,
 		EmailVerified: user.EmailVerified,
 		Name:          fmt.Sprintf("%s %s", user.FirstName, user.LastName),
