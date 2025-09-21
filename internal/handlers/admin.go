@@ -3,8 +3,8 @@ package handlers
 import (
 	"net/http"
 	"strconv"
+	"time"
 
-	"ex4-oauth2/internal/middleware"
 	"ex4-oauth2/internal/models"
 	"ex4-oauth2/internal/services"
 
@@ -46,18 +46,20 @@ func (h *AdminHandler) GetDashboardStats(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, stats)
+	c.JSON(http.StatusOK, gin.H{
+		"stats": stats,
+	})
 }
 
 // GetUsers returns paginated user list with filters
 func (h *AdminHandler) GetUsers(c *gin.Context) {
 	// Parse pagination parameters
-	limitStr := c.DefaultQuery("limit", "50")
+	limitStr := c.DefaultQuery("limit", "20")
 	offsetStr := c.DefaultQuery("offset", "0")
 
 	limit, err := strconv.Atoi(limitStr)
-	if err != nil || limit < 1 || limit > 200 {
-		limit = 50
+	if err != nil || limit < 1 || limit > 100 {
+		limit = 20
 	}
 
 	offset, err := strconv.Atoi(offsetStr)
@@ -67,18 +69,29 @@ func (h *AdminHandler) GetUsers(c *gin.Context) {
 
 	// Parse filters
 	filters := make(map[string]interface{})
-	if email := c.Query("email"); email != "" {
-		filters["email"] = email
-	}
+
 	if role := c.Query("role"); role != "" {
 		filters["role"] = role
 	}
-	if isActive := c.Query("is_active"); isActive != "" {
-		if isActive == "true" {
-			filters["is_active"] = true
-		} else if isActive == "false" {
-			filters["is_active"] = false
+
+	if isActiveStr := c.Query("is_active"); isActiveStr != "" {
+		if isActive, err := strconv.ParseBool(isActiveStr); err == nil {
+			filters["is_active"] = isActive
 		}
+	}
+
+	if emailVerifiedStr := c.Query("email_verified"); emailVerifiedStr != "" {
+		if emailVerified, err := strconv.ParseBool(emailVerifiedStr); err == nil {
+			filters["email_verified"] = emailVerified
+		}
+	}
+
+	if provider := c.Query("provider"); provider != "" {
+		filters["provider"] = provider
+	}
+
+	if search := c.Query("search"); search != "" {
+		filters["search"] = search
 	}
 
 	users, total, err := h.adminService.GetUsers(limit, offset, filters)
@@ -134,25 +147,98 @@ func (h *AdminHandler) GetUserActivity(c *gin.Context) {
 	})
 }
 
+// GetSystemEvents returns system event logs
+func (h *AdminHandler) GetSystemEvents(c *gin.Context) {
+	// Parse pagination parameters
+	limitStr := c.DefaultQuery("limit", "50")
+	offsetStr := c.DefaultQuery("offset", "0")
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit < 1 || limit > 200 {
+		limit = 50
+	}
+
+	offset, err := strconv.Atoi(offsetStr)
+	if err != nil || offset < 0 {
+		offset = 0
+	}
+
+	// Parse filters
+	filters := make(map[string]interface{})
+
+	if eventType := c.Query("event_type"); eventType != "" {
+		filters["event_type"] = eventType
+	}
+
+	if severity := c.Query("severity"); severity != "" {
+		filters["severity"] = severity
+	}
+
+	if userIDStr := c.Query("user_id"); userIDStr != "" {
+		filters["user_id"] = userIDStr
+	}
+
+	if fromDate := c.Query("from_date"); fromDate != "" {
+		if parsedDate, err := time.Parse("2006-01-02", fromDate); err == nil {
+			filters["from_date"] = parsedDate
+		}
+	}
+
+	if toDate := c.Query("to_date"); toDate != "" {
+		if parsedDate, err := time.Parse("2006-01-02", toDate); err == nil {
+			filters["to_date"] = parsedDate.Add(24*time.Hour - time.Second) // End of day
+		}
+	}
+
+	events, err := h.adminService.GetSystemEvents(limit, offset, filters)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to fetch system events",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"events":  events,
+		"limit":   limit,
+		"offset":  offset,
+		"filters": filters,
+	})
+}
+
 // UpdateUserStatus updates user active status
 func (h *AdminHandler) UpdateUserStatus(c *gin.Context) {
-	userIDStr := c.Param("id")
+	// Parse user ID
+	userID := c.Param("id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid user ID",
+		})
+		return
+	}
 
+	// Parse request body
 	var req UpdateUserStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Invalid request",
+			"details": err.Error(),
+		})
 		return
 	}
 
 	// Check if user exists
-	user, err := h.userRepo.GetByID(userIDStr)
+	user, err := h.userRepo.GetByID(userID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "User not found",
+		})
 		return
 	}
 
 	// Update user status
-	if err := h.adminService.UpdateUserStatus(userIDStr, req.IsActive); err != nil {
+	if err := h.adminService.UpdateUserStatus(userID, req.IsActive); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to update user status",
 			"details": err.Error(),
@@ -161,7 +247,7 @@ func (h *AdminHandler) UpdateUserStatus(c *gin.Context) {
 	}
 
 	// Log admin activity
-	adminUserID, _, _, _ := middleware.RequireAuth(c)
+	adminUserID := c.GetString("user_id")
 	h.adminService.LogUserActivity(
 		adminUserID,
 		"admin_update_user_status",
@@ -169,9 +255,8 @@ func (h *AdminHandler) UpdateUserStatus(c *gin.Context) {
 		c.GetHeader("User-Agent"),
 		true,
 		map[string]interface{}{
-			"target_user_id": userIDStr,
-			"new_status":     req.IsActive,
-			"old_status":     user.IsActive,
+			"target_user_id": userID,
+			"is_active":      req.IsActive,
 		},
 		"",
 	)
@@ -188,24 +273,37 @@ func (h *AdminHandler) UpdateUserStatus(c *gin.Context) {
 
 // UpdateUserRole updates user role
 func (h *AdminHandler) UpdateUserRole(c *gin.Context) {
-	userIDStr := c.Param("id")
+	// Parse user ID
+	userID := c.Param("id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid user ID",
+		})
+		return
+	}
 
+	// Parse request body
 	var req UpdateUserRoleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Invalid request",
+			"details": err.Error(),
+		})
 		return
 	}
 
 	// Check if user exists
-	user, err := h.userRepo.GetByID(userIDStr)
+	user, err := h.userRepo.GetByID(userID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "User not found",
+		})
 		return
 	}
 
-	// Prevent admin from changing their own role
-	adminUserID, _, _, _ := middleware.RequireAuth(c)
-	if adminUserID == userIDStr && req.Role != "admin" {
+	// Prevent self-demotion for admins
+	adminUserID := c.GetString("user_id")
+	if adminUserID == userID && req.Role != "admin" {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Cannot change your own admin role",
 		})
@@ -213,7 +311,7 @@ func (h *AdminHandler) UpdateUserRole(c *gin.Context) {
 	}
 
 	// Update user role
-	if err := h.adminService.UpdateUserRole(userIDStr, req.Role); err != nil {
+	if err := h.adminService.UpdateUserRole(userID, req.Role); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to update user role",
 			"details": err.Error(),
@@ -229,7 +327,7 @@ func (h *AdminHandler) UpdateUserRole(c *gin.Context) {
 		c.GetHeader("User-Agent"),
 		true,
 		map[string]interface{}{
-			"target_user_id": userIDStr,
+			"target_user_id": userID,
 			"new_role":       req.Role,
 			"old_role":       user.Role,
 		},
@@ -248,18 +346,27 @@ func (h *AdminHandler) UpdateUserRole(c *gin.Context) {
 
 // DeleteUser soft deletes a user
 func (h *AdminHandler) DeleteUser(c *gin.Context) {
-	userIDStr := c.Param("id")
+	// Parse user ID
+	userID := c.Param("id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid user ID",
+		})
+		return
+	}
 
 	// Check if user exists
-	user, err := h.userRepo.GetByID(userIDStr)
+	user, err := h.userRepo.GetByID(userID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "User not found",
+		})
 		return
 	}
 
 	// Prevent self-deletion for admins
-	adminUserID, _, _, _ := middleware.RequireAuth(c)
-	if adminUserID == userIDStr {
+	adminUserID := c.GetString("user_id")
+	if adminUserID == userID {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Cannot delete your own account",
 		})
@@ -267,7 +374,7 @@ func (h *AdminHandler) DeleteUser(c *gin.Context) {
 	}
 
 	// Delete user
-	if err := h.adminService.DeleteUser(userIDStr); err != nil {
+	if err := h.adminService.DeleteUser(userID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to delete user",
 			"details": err.Error(),
@@ -283,9 +390,8 @@ func (h *AdminHandler) DeleteUser(c *gin.Context) {
 		c.GetHeader("User-Agent"),
 		true,
 		map[string]interface{}{
-			"target_user_id": userIDStr,
-			"email":          user.Email,
-			"username":       user.Username,
+			"target_user_id": userID,
+			"target_email":   user.Email,
 		},
 		"",
 	)
@@ -295,47 +401,61 @@ func (h *AdminHandler) DeleteUser(c *gin.Context) {
 	})
 }
 
-// GetSystemEvents returns system event logs with pagination and filtering
-func (h *AdminHandler) GetSystemEvents(c *gin.Context) {
-	// Get pagination parameters
-	limit, err := strconv.Atoi(c.DefaultQuery("limit", "20"))
-	if err != nil || limit <= 0 || limit > 100 {
-		limit = 20
+// CleanupLogs removes old activity logs and events
+func (h *AdminHandler) CleanupLogs(c *gin.Context) {
+	retentionDaysStr := c.DefaultQuery("retention_days", "90")
+	retentionDays, err := strconv.Atoi(retentionDaysStr)
+	if err != nil || retentionDays < 1 {
+		retentionDays = 90
 	}
 
-	offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
-	if err != nil || offset < 0 {
-		offset = 0
-	}
-
-	// Get filters
-	filters := make(map[string]interface{})
-	if eventType := c.Query("event_type"); eventType != "" {
-		filters["event_type"] = eventType
-	}
-	if severity := c.Query("severity"); severity != "" {
-		filters["severity"] = severity
-	}
-	if userID := c.Query("user_id"); userID != "" {
-		filters["user_id"] = userID
-	}
-
-	// Get events
-	events, err := h.adminService.GetSystemEvents(limit, offset, filters)
-	if err != nil {
+	if err := h.adminService.CleanupOldLogs(retentionDays); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to get system events",
+			"error":   "Failed to cleanup logs",
 			"details": err.Error(),
 		})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"events": events,
-		"meta": gin.H{
-			"limit":  limit,
-			"offset": offset,
-			"count":  len(events),
+	// Log admin activity
+	adminUserID := c.GetString("user_id")
+	h.adminService.LogUserActivity(
+		adminUserID,
+		"admin_cleanup_logs",
+		c.ClientIP(),
+		c.GetHeader("User-Agent"),
+		true,
+		map[string]interface{}{
+			"retention_days": retentionDays,
 		},
+		"",
+	)
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":        "Logs cleaned up successfully",
+		"retention_days": retentionDays,
+	})
+}
+
+// GetSystemInfo returns system information
+func (h *AdminHandler) GetSystemInfo(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"system": gin.H{
+			"name":        "OAuth2 Authorization Server",
+			"version":     "1.0.0",
+			"environment": "development", // Should come from config
+			"timestamp":   time.Now().Unix(),
+		},
+		"admin_features": []string{
+			"User Management",
+			"Role Management",
+			"Activity Logging",
+			"System Events",
+			"Dashboard Statistics",
+			"Log Cleanup",
+		},
+		"valid_roles":       h.adminService.GetValidRoles(),
+		"valid_event_types": h.adminService.GetValidEventTypes(),
+		"valid_severities":  h.adminService.GetValidSeverityLevels(),
 	})
 }
