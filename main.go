@@ -177,6 +177,8 @@ func setupFullRouter(cfg *config.Config, authHandler *handlers.AuthHandler, oaut
 			{
 				oauth.GET("/authorize", oauthHandler.Authorize)
 				oauth.POST("/authorize", oauthHandler.Authorize)
+				// /api/auth/oauth/login
+				oauth.POST("/login", oauthHandler.LoginAndAuthorize)
 				oauth.POST("/token", oauthHandler.Token)
 				oauth.GET("/userinfo", oauthHandler.UserInfo)
 				oauth.GET("/.well-known/openid-configuration", oauthHandler.WellKnown)

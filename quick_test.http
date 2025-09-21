@@ -18,6 +18,56 @@ POST http://localhost:8080/api/auth/login
 Content-Type: application/json
 
 {
-  "email": "test@example.com",
-  "password": "password123"
+  "email": "admin@example.com",
+  "password": "admin123"
 }
+
+### Test 3: Get Profile (Protected)
+GET http://localhost:8080/api/auth/profile
+Authorization: Bearer <access_token>
+
+###
+
+### Test 4: OAuth Authorization Endpoint (Get Authorization Code)
+GET http://localhost:8080/api/auth/oauth/authorize?response_type=code&client_id=4xsmjvVypydAOUFZrDxwn12J-rWdFIYa&redirect_uri=http://localhost:3000/callback&scope=read&state=test123
+
+### /api/auth/oauth/login
+POST http://localhost:8080/api/auth/oauth/login
+Content-Type: application/application/x-www-form-urlencoded
+
+email=admin@example.com&password=admin123&response_type=code&client_id=4xsmjvVypydAOUFZrDxwn12J-rWdFIYa&redirect_uri=http://localhost:3000/callback&scope=read&state=test123
+### Test 5: OAuth Token Exchange (Exchange Code for Access Token)
+POST http://localhost:8080/api/auth/oauth/token
+Content-Type: application/x-www-form-urlencoded
+grant_type=authorization_code&code=<authorization_code>&redirect_uri=http://localhost:3000/callback&client_id=4xsmjvVypydAOUFZrDxwn12J-rWdFIYa
+
+
+//
+###
+POST http://localhost:8080/api/auth/oauth/login
+Content-Type: application/x-www-form-urlencoded
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+Accept-Language: th-TH,th;q=0.9
+Cache-Control: max-age=0
+Connection: keep-alive
+DNT: 1
+Origin: http://localhost:8080
+Referer: http://localhost:8080/api/auth/oauth/authorize?response_type=code&client_id=4xsmjvVypydAOUFZrDxwn12J-rWdFIYa&redirect_uri=http://localhost:3000/callback&scope=read&state=test123
+Sec-Fetch-Dest: document
+Sec-Fetch-Mode: navigate
+Sec-Fetch-Site: same-origin
+Sec-Fetch-User: ?1
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36
+sec-ch-ua: "Chromium";v="140", "Not=A?Brand";v="24", "Google Chrome";v="140"
+sec-ch-ua-mobile: ?0
+sec-ch-ua-platform: "macOS"
+
+response_type=code&client_id=4xsmjvVypydAOUFZrDxwn12J-rWdFIYa&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fcallback&scope=read&state=test123&code_challenge=&code_challenge_method=&nonce=&email=admin%40example.com&password=admin123
+
+### Test 6: OAuth Token Exchange (Exchange Code for Access Token)
+POST http://localhost:8080/api/auth/oauth/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=authorization_code&code=caDmw1pGYRsXXLXVY1_G0hpUl6FX3nqQ&redirect_uri=http://localhost:3000/callback&client_id=4xsmjvVypydAOUFZrDxwn12J-rWdFIYa&client_secret=9mYxPS4p_G-LoxaYnT-szafwVoRwh_BLe9zh1TGcGBZgi0OJISppd4U12KK_2tsh
+

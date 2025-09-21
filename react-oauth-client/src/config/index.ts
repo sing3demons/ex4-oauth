@@ -151,7 +151,7 @@ export const endpoints = {
 export const env = {
   NODE_ENV: import.meta.env.NODE_ENV || 'development',
   VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api',
-  VITE_OAUTH_CLIENT_ID: import.meta.env.VITE_OAUTH_CLIENT_ID || 'WdJTw9_Ak51FZWt7znskk-GFKejDfsiS',
+  VITE_OAUTH_CLIENT_ID: import.meta.env.VITE_OAUTH_CLIENT_ID || '4xsmjvVypydAOUFZrDxwn12J-rWdFIYa',
   VITE_OAUTH_REDIRECT_URI: import.meta.env.VITE_OAUTH_REDIRECT_URI || 'http://localhost:5173/callback',
   VITE_WS_URL: import.meta.env.VITE_WS_URL || 'ws://localhost:8080/api/ws/connect',
 } as const;
