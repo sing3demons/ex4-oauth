@@ -105,14 +105,16 @@ func (s *EmailService) SendVerificationEmail(user *models.User, baseURL string) 
 	}
 
 	// Get email template
-	template, err := s.emailTemplateRepository.GetByName("verification")
-	if err != nil {
-		// Use default template if not found
-		return s.sendDefaultVerificationEmail(user.Email, emailData)
+	if s.emailTemplateRepository != nil {
+		template, err := s.emailTemplateRepository.GetByName("verification")
+		if err == nil {
+			// Send email using template
+			return s.sendTemplatedEmail(user.Email, template, emailData)
+		}
 	}
 
-	// Send email using template
-	return s.sendTemplatedEmail(user.Email, template, emailData)
+	// Use default template if repository is nil or template not found
+	return s.sendDefaultVerificationEmail(user.Email, emailData)
 }
 
 // SendPasswordResetEmail sends password reset email
@@ -154,14 +156,16 @@ func (s *EmailService) SendPasswordResetEmail(user *models.User, baseURL string)
 	}
 
 	// Get email template
-	template, err := s.emailTemplateRepository.GetByName("password_reset")
-	if err != nil {
-		// Use default template if not found
-		return s.sendDefaultPasswordResetEmail(user.Email, emailData)
+	if s.emailTemplateRepository != nil {
+		template, err := s.emailTemplateRepository.GetByName("password_reset")
+		if err == nil {
+			// Send email using template
+			return s.sendTemplatedEmail(user.Email, template, emailData)
+		}
 	}
 
-	// Send email using template
-	return s.sendTemplatedEmail(user.Email, template, emailData)
+	// Use default template if repository is nil or template not found
+	return s.sendDefaultPasswordResetEmail(user.Email, emailData)
 }
 
 // VerifyEmail verifies an email verification token
@@ -384,12 +388,19 @@ func (s *EmailService) sendEmail(to, subject, htmlBody, textBody string) error {
 	// Build email message
 	msg := s.buildEmailMessage(from, to, subject, htmlBody, textBody)
 
+	// Debug: Print email configuration
+	fmt.Printf("🔧 SMTP Config: Host=%s, Port=%s, From=%s\n", s.config.SMTPHost, s.config.SMTPPort, s.config.FromEmail)
+	fmt.Printf("📧 Sending email to: %s\n", to)
+	fmt.Printf("📨 Subject: %s\n", subject)
+
 	// Send email
 	err := smtp.SendMail(smtpAddr, auth, s.config.FromEmail, []string{to}, []byte(msg))
 	if err != nil {
+		fmt.Printf("❌ Email send failed: %v\n", err)
 		return fmt.Errorf("failed to send email: %w", err)
 	}
 
+	fmt.Printf("✅ Email sent successfully to: %s\n", to)
 	return nil
 }
 

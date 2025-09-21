@@ -13,9 +13,15 @@ import (
 	"ex4-oauth2/internal/services"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	// Load .env file
+	if err := godotenv.Load(); err != nil {
+		log.Println("Warning: .env file not found, using system environment variables")
+	}
+
 	// Load configuration
 	cfg := config.Load()
 
@@ -40,6 +46,7 @@ func main() {
 	userRepo := database.NewMongoUserRepository(mongodb.GetDatabase())
 	refreshTokenRepo := database.NewMongoRefreshTokenRepository(mongodb.GetDatabase())
 	emailVerificationRepo := database.NewMongoEmailVerificationRepository(mongodb.GetDatabase())
+	emailTemplateRepo := database.NewMongoEmailTemplateRepository(mongodb.GetDatabase())
 
 	// OAuth2 repositories
 	clientRepo := database.NewMongoOAuth2ClientRepository(mongodb.GetDatabase())
@@ -57,7 +64,7 @@ func main() {
 	// Setup email service
 	emailService := services.NewEmailService(
 		emailVerificationRepo,
-		nil, // email template repo
+		emailTemplateRepo, // email template repo
 		userRepo,
 	)
 
@@ -99,6 +106,7 @@ func main() {
 	log.Printf("  • Discovery: GET /api/auth/oauth/.well-known/openid-configuration")
 	log.Printf("  • Register: POST /api/auth/register")
 	log.Printf("  • Login: POST /api/auth/login")
+	log.Printf("  • Verify Email: GET /api/auth/verify-email")
 	log.Printf("  • Profile: GET /api/auth/profile")
 	log.Printf("  • Refresh: POST /api/auth/refresh")
 	log.Printf("  • Logout: POST /api/auth/logout")
@@ -151,6 +159,7 @@ func setupFullRouter(cfg *config.Config, authHandler *handlers.AuthHandler, oaut
 			auth.POST("/register", authHandler.Register)
 			auth.POST("/login", authHandler.Login)
 			auth.POST("/refresh", authHandler.RefreshToken)
+			auth.GET("/verify-email", authHandler.VerifyEmail)
 
 			// Protected authentication endpoints
 			authProtected := auth.Group("")

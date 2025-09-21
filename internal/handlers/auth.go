@@ -395,3 +395,29 @@ func getScheme(c *gin.Context) string {
 
 	return "http"
 }
+
+// VerifyEmail handles email verification
+func (h *AuthHandler) VerifyEmail(c *gin.Context) {
+	token := c.Query("token")
+	if token == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Verification token is required"})
+		return
+	}
+
+	// Verify the email token
+	user, err := h.emailService.VerifyEmail(token)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Email verified successfully",
+		"user": gin.H{
+			"id":             user.ID,
+			"email":          user.Email,
+			"username":       user.Username,
+			"email_verified": user.EmailVerified,
+		},
+	})
+}

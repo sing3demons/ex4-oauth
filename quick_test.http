@@ -1,15 +1,17 @@
 ### Test 1: Registration
+# @name response
 POST http://localhost:8080/api/auth/register
 Content-Type: application/json
 
 {
-  "username": "newtest",
-  "email": "newtest@example.com",
-  "password": "password123",
-  "full_name": "New Test User"
+  "username": "admin",
+  "email": "admin@example.com",
+  "password": "admin123",
+  "full_name": "super user"
 }
 
 ###
+# @
 
 ### Test 2: Login
 POST http://localhost:8080/api/auth/login
