@@ -9,6 +9,8 @@ import CallbackPage from './pages/CallbackPage';
 import DashboardPage from './pages/DashboardPage';
 import ProfilePage from './pages/ProfilePage';
 import NotFoundPage from './pages/NotFoundPage';
+import { AuthPage } from './pages/AuthPage';
+import { EmailVerificationPage } from './pages/EmailVerificationPage';
 
 // Components
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
@@ -34,6 +36,8 @@ function App() {
         {/* Public Routes */}
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/verify-email" element={<EmailVerificationPage />} />
         <Route path="/callback" element={<CallbackPage />} />
         
         {/* Protected Routes */}

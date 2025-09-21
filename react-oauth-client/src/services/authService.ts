@@ -342,6 +342,18 @@ class AuthService {
   getAccessToken(): string | null {
     return StorageUtils.getAccessToken();
   }
+
+  /**
+   * Verify email with token
+   */
+  async verifyEmail(token: string): Promise<{ user: any; message: string }> {
+    try {
+      const response = await apiClient.get(`/auth/verify-email?token=${token}`);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 // Export singleton instance
