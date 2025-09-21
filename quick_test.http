@@ -1,0 +1,21 @@
+### Test 1: Registration
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "newtest",
+  "email": "newtest@example.com",
+  "password": "password123",
+  "full_name": "New Test User"
+}
+
+###
+
+### Test 2: Login
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "password123"
+}

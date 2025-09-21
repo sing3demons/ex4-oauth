@@ -51,7 +51,7 @@ type RefreshTokenRequest struct {
 
 // UserResponse represents the user response (without sensitive data)
 type UserResponse struct {
-	ID            uint   `json:"id"`
+	ID            string `json:"id"`
 	Email         string `json:"email"`
 	Username      string `json:"username"`
 	FirstName     string `json:"first_name"`

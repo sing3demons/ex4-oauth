@@ -115,7 +115,7 @@ func (h *OAuthHandler) Authorize(c *gin.Context) {
 
 	// Check if user is authenticated by looking for Authorization header
 	authHeader := c.GetHeader("Authorization")
-	var userID uint
+	var userID string
 	var authenticated bool
 
 	if authHeader != "" {
@@ -146,7 +146,7 @@ func (h *OAuthHandler) Authorize(c *gin.Context) {
 func (h *OAuthHandler) Consent(c *gin.Context) {
 	// Check if user is authenticated by looking for Authorization header (similar to Authorize method)
 	authHeader := c.GetHeader("Authorization")
-	var userID uint
+	var userID string
 	var authenticated bool
 
 	if authHeader != "" {
@@ -564,7 +564,7 @@ func (h *OAuthHandler) showConsentScreen(c *gin.Context, userID uint, req *Autho
 }
 
 // handleAPIAuthorization handles OAuth authorization for API clients (auto-approve)
-func (h *OAuthHandler) handleAPIAuthorization(c *gin.Context, userID uint, req *AuthorizeRequest, client *models.OAuth2Client) {
+func (h *OAuthHandler) handleAPIAuthorization(c *gin.Context, userID string, req *AuthorizeRequest, client *models.OAuth2Client) {
 	// Generate authorization code
 	code := models.GenerateAuthorizationCode()
 	authCode := &models.OAuth2AuthorizationCode{

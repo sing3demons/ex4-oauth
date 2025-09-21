@@ -97,33 +97,33 @@ func CORSMiddleware() gin.HandlerFunc {
 }
 
 // GetUserFromContext extracts user information from Gin context
-func GetUserFromContext(c *gin.Context) (userID uint, email string, username string, exists bool) {
+func GetUserFromContext(c *gin.Context) (userID string, email string, username string, exists bool) {
 	userIDValue, exists1 := c.Get("user_id")
 	emailValue, exists2 := c.Get("email")
 	usernameValue, exists3 := c.Get("username")
 
 	if !exists1 || !exists2 || !exists3 {
-		return 0, "", "", false
+		return "", "", "", false
 	}
 
-	userID, ok1 := userIDValue.(uint)
+	userID, ok1 := userIDValue.(string)
 	email, ok2 := emailValue.(string)
 	username, ok3 := usernameValue.(string)
 
 	if !ok1 || !ok2 || !ok3 {
-		return 0, "", "", false
+		return "", "", "", false
 	}
 
 	return userID, email, username, true
 }
 
 // RequireAuth ensures user is authenticated and returns user info
-func RequireAuth(c *gin.Context) (userID uint, email string, username string, ok bool) {
+func RequireAuth(c *gin.Context) (userID string, email string, username string, ok bool) {
 	userID, email, username, exists := GetUserFromContext(c)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
 		c.Abort()
-		return 0, "", "", false
+		return "", "", "", false
 	}
 	return userID, email, username, true
 }

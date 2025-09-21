@@ -1,0 +1,178 @@
+### OAuth2 API Testing
+### Base URL: http://localhost:8080
+
+### Variables
+@baseUrl = http://localhost:8080
+@email = testuser@example.com
+@password = password123
+@username = testuser
+
+### 1. Health Check
+GET {{baseUrl}}/health
+
+### 2. Get Available Endpoints
+GET {{baseUrl}}/api/endpoints
+
+### 3. User Registration
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "email": "{{email}}",
+  "password": "{{password}}",
+  "full_name": "Test User"
+}
+
+### 4. User Login (Get JWT Token)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### 5. Get User Profile (Protected - Need JWT Token from login)
+GET {{baseUrl}}/api/auth/profile
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+### 6. Create OAuth Client (Protected - Need JWT Token)
+POST {{baseUrl}}/api/auth/clients
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+{
+  "name": "Test OAuth Client",
+  "description": "OAuth client for testing",
+  "redirect_uris": ["http://localhost:3000/callback"],
+  "scopes": ["read", "write"],
+  "grant_types": ["authorization_code", "refresh_token"]
+}
+
+### 7. Get OAuth Clients List (Protected)
+GET {{baseUrl}}/api/auth/clients
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+### 8. OAuth Authorization Endpoint (Step 1 - Get Authorization Code)
+GET {{baseUrl}}/api/auth/oauth/authorize?response_type=code&client_id=YOUR_CLIENT_ID&redirect_uri=http://localhost:3000/callback&scope=read&state=random_state_string
+
+### 9. OAuth Token Exchange (Step 2 - Exchange Code for Access Token)
+POST {{baseUrl}}/api/auth/oauth/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=authorization_code&code=YOUR_AUTHORIZATION_CODE&redirect_uri=http://localhost:3000/callback&client_id=YOUR_CLIENT_ID&client_secret=YOUR_CLIENT_SECRET
+
+### 10. OAuth UserInfo Endpoint (Using Access Token)
+GET {{baseUrl}}/api/auth/oauth/userinfo
+Authorization: Bearer YOUR_ACCESS_TOKEN_HERE
+
+### 11. OAuth Discovery Endpoint
+GET {{baseUrl}}/api/auth/oauth/.well-known/openid-configuration
+
+### 12. Token Introspection (RFC 7662)
+POST {{baseUrl}}/api/auth/oauth/introspect
+Content-Type: application/x-www-form-urlencoded
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+token=YOUR_ACCESS_TOKEN_TO_INSPECT
+
+### 13. Admin Dashboard (Admin Only)
+GET {{baseUrl}}/api/auth/admin/dashboard
+Authorization: Bearer YOUR_ADMIN_JWT_TOKEN_HERE
+
+### 14. Admin - Get Users (Admin Only)
+GET {{baseUrl}}/api/auth/admin/users?limit=10&offset=0
+Authorization: Bearer YOUR_ADMIN_JWT_TOKEN_HERE
+
+### 15. Admin - Update User Status (Admin Only)
+PUT {{baseUrl}}/api/auth/admin/users/USER_ID_HERE/status
+Content-Type: application/json
+Authorization: Bearer YOUR_ADMIN_JWT_TOKEN_HERE
+
+{
+  "is_active": false
+}
+
+### 16. Admin - Update User Role (Admin Only)
+PUT {{baseUrl}}/api/auth/admin/users/USER_ID_HERE/role
+Content-Type: application/json
+Authorization: Bearer YOUR_ADMIN_JWT_TOKEN_HERE
+
+{
+  "role": "admin"
+}
+
+### 17. Admin - Get System Events (Admin Only)
+GET {{baseUrl}}/api/auth/admin/events?limit=20&offset=0
+Authorization: Bearer YOUR_ADMIN_JWT_TOKEN_HERE
+
+### 18. Refresh Token
+POST {{baseUrl}}/api/auth/refresh
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+{
+  "refresh_token": "YOUR_REFRESH_TOKEN_HERE"
+}
+
+### 19. Logout
+POST {{baseUrl}}/api/auth/logout
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+### 20. Change Password (Protected)
+POST {{baseUrl}}/api/auth/change-password
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+{
+  "current_password": "{{password}}",
+  "new_password": "newpassword123"
+}
+
+### Example OAuth Flow Test (Complete Flow)
+### Step 1: Register a new user
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "oauthuser",
+  "email": "oauth@example.com",
+  "password": "password123",
+  "full_name": "OAuth Test User"
+}
+
+### Step 2: Login to get JWT token
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "oauth@example.com",
+  "password": "password123"
+}
+
+### Step 3: Create OAuth client (use JWT from step 2)
+POST {{baseUrl}}/api/auth/clients
+Content-Type: application/json
+Authorization: Bearer JWT_TOKEN_FROM_STEP_2
+
+{
+  "name": "Test App",
+  "description": "Test OAuth Application",
+  "redirect_uris": ["http://localhost:3000/callback"],
+  "scopes": ["read", "write"],
+  "grant_types": ["authorization_code", "refresh_token"]
+}
+
+### Step 4: Simulate OAuth Authorization (use client_id from step 3)
+### In browser: http://localhost:8080/api/auth/oauth/authorize?response_type=code&client_id=CLIENT_ID&redirect_uri=http://localhost:3000/callback&scope=read&state=xyz
+
+### Step 5: Exchange authorization code for access token
+POST {{baseUrl}}/api/auth/oauth/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=authorization_code&code=AUTHORIZATION_CODE&redirect_uri=http://localhost:3000/callback&client_id=CLIENT_ID&client_secret=CLIENT_SECRET
+
+### Step 6: Use access token to get user info
+GET {{baseUrl}}/api/auth/oauth/userinfo
+Authorization: Bearer ACCESS_TOKEN_FROM_STEP_5

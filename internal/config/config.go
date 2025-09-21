@@ -43,7 +43,7 @@ func Load() *Config {
 		Env:  getEnv("ENV", "development"),
 
 		// Database settings
-		DatabaseURL: getEnv("DATABASE_URL", "auth.db"),
+		DatabaseURL: getEnv("DATABASE_URL", "mongodb://localhost:27017"),
 
 		// JWT settings
 		JWTSecret:       getEnv("JWT_SECRET", "your-super-secret-jwt-key-change-this-in-production"),

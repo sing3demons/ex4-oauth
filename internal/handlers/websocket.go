@@ -4,208 +4,94 @@ import (
 	"net/http"
 	"strconv"
 
-	"ex4-oauth2/internal/models"
 	"ex4-oauth2/internal/services"
 
 	"github.com/gin-gonic/gin"
 )
 
-// WebSocketHandler handles WebSocket connections and notifications
+// WebSocketHandler handles websocket and notification operations (simplified)
 type WebSocketHandler struct {
-	websocketService    *services.WebSocketService
-	notificationService *services.NotificationService
+	websocketService     *services.WebSocketService
+	notificationService  *services.NotificationService
 }
 
-// NewWebSocketHandler creates a new WebSocket handler
+// NewWebSocketHandler creates a new websocket handler
 func NewWebSocketHandler(websocketService *services.WebSocketService, notificationService *services.NotificationService) *WebSocketHandler {
 	return &WebSocketHandler{
-		websocketService:    websocketService,
-		notificationService: notificationService,
+		websocketService:     websocketService,
+		notificationService:  notificationService,
 	}
 }
 
-// HandleWebSocketConnection handles WebSocket upgrade and connection
-func (h *WebSocketHandler) HandleWebSocketConnection(c *gin.Context) {
-	// Get user info from context (should be set by auth middleware)
-	userIDInterface, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
-		return
-	}
-
-	userID, ok := userIDInterface.(uint)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID"})
-		return
-	}
-
-	roleInterface, exists := c.Get("user_role")
-	role := "user"
-	if exists {
-		if userRole, ok := roleInterface.(string); ok {
-			role = userRole
-		}
-	}
-
-	// Handle WebSocket upgrade
-	err := h.websocketService.HandleConnection(c, &userID, role)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to establish WebSocket connection",
-			"details": err.Error(),
-		})
-		return
-	}
+// HandleWebSocket handles websocket connections
+func (h *WebSocketHandler) HandleWebSocket(c *gin.Context) {
+	h.websocketService.HandleWebSocket(c)
 }
 
-// HandleAnonymousWebSocket handles WebSocket connections for anonymous users (public notifications)
-func (h *WebSocketHandler) HandleAnonymousWebSocket(c *gin.Context) {
-	// Handle WebSocket upgrade for anonymous users (limited channels)
-	err := h.websocketService.HandleConnection(c, nil, "anonymous")
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to establish WebSocket connection",
-			"details": err.Error(),
-		})
-		return
-	}
-}
-
-// GetNotifications handles GET /api/notifications
+// GetNotifications returns user notifications
 func (h *WebSocketHandler) GetNotifications(c *gin.Context) {
-	userIDInterface, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+	userID := c.GetString("user_id")
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "User not authenticated",
+		})
 		return
 	}
 
-	userID, ok := userIDInterface.(uint)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID"})
-		return
+	// Get pagination parameters
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	if err != nil || limit <= 0 || limit > 100 {
+		limit = 20
 	}
 
-	// Parse query parameters
-	filter := &models.NotificationFilter{}
-
-	if limitStr := c.Query("limit"); limitStr != "" {
-		if limit, err := strconv.Atoi(limitStr); err == nil {
-			filter.Limit = limit
-		}
-	}
-
-	if offsetStr := c.Query("offset"); offsetStr != "" {
-		if offset, err := strconv.Atoi(offsetStr); err == nil {
-			filter.Offset = offset
-		}
-	}
-
-	if typeStr := c.Query("type"); typeStr != "" {
-		filter.Type = models.NotificationType(typeStr)
-	}
-
-	if priorityStr := c.Query("priority"); priorityStr != "" {
-		filter.Priority = models.NotificationPriority(priorityStr)
-	}
-
-	if unreadStr := c.Query("unread"); unreadStr != "" {
-		if unread, err := strconv.ParseBool(unreadStr); err == nil {
-			filter.Unread = &unread
-		}
+	offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if err != nil || offset < 0 {
+		offset = 0
 	}
 
 	// Get notifications
-	notifications, total, err := h.notificationService.GetNotifications(userID, filter)
+	notifications, err := h.notificationService.GetUserNotifications(userID, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to retrieve notifications",
+			"error":   "Failed to get notifications",
 			"details": err.Error(),
 		})
 		return
 	}
 
+	// Get unread count
+	unreadCount, _ := h.notificationService.GetUnreadCount(userID)
+
 	c.JSON(http.StatusOK, gin.H{
-		"data": notifications,
-		"pagination": gin.H{
-			"total":  total,
-			"limit":  filter.Limit,
-			"offset": filter.Offset,
+		"notifications": notifications,
+		"unread_count":  unreadCount,
+		"meta": gin.H{
+			"limit":  limit,
+			"offset": offset,
+			"count":  len(notifications),
 		},
 	})
 }
 
-// GetAdminNotifications handles GET /api/admin/notifications
-func (h *WebSocketHandler) GetAdminNotifications(c *gin.Context) {
-	// Parse query parameters
-	filter := &models.NotificationFilter{}
-
-	if limitStr := c.Query("limit"); limitStr != "" {
-		if limit, err := strconv.Atoi(limitStr); err == nil {
-			filter.Limit = limit
-		}
-	}
-
-	if offsetStr := c.Query("offset"); offsetStr != "" {
-		if offset, err := strconv.Atoi(offsetStr); err == nil {
-			filter.Offset = offset
-		}
-	}
-
-	if typeStr := c.Query("type"); typeStr != "" {
-		filter.Type = models.NotificationType(typeStr)
-	}
-
-	if priorityStr := c.Query("priority"); priorityStr != "" {
-		filter.Priority = models.NotificationPriority(priorityStr)
-	}
-
-	if channelStr := c.Query("channel"); channelStr != "" {
-		filter.Channel = models.NotificationChannel(channelStr)
-	}
-
-	// Get admin notifications
-	notifications, total, err := h.notificationService.GetAdminNotifications(filter)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to retrieve notifications",
-			"details": err.Error(),
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"data": notifications,
-		"pagination": gin.H{
-			"total":  total,
-			"limit":  filter.Limit,
-			"offset": filter.Offset,
-		},
-	})
-}
-
-// MarkNotificationAsRead handles PUT /api/notifications/:id/read
+// MarkNotificationAsRead marks a notification as read
 func (h *WebSocketHandler) MarkNotificationAsRead(c *gin.Context) {
-	userIDInterface, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+	userID := c.GetString("user_id")
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "User not authenticated",
+		})
 		return
 	}
 
-	userID, ok := userIDInterface.(uint)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID"})
+	notificationID := c.Param("id")
+	if notificationID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Notification ID is required",
+		})
 		return
 	}
 
-	notificationIDStr := c.Param("id")
-	notificationID, err := strconv.ParseUint(notificationIDStr, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid notification ID"})
-		return
-	}
-
-	err = h.notificationService.MarkAsRead(uint(notificationID), userID)
-	if err != nil {
+	if err := h.notificationService.MarkNotificationAsRead(notificationID, userID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to mark notification as read",
 			"details": err.Error(),
@@ -213,58 +99,30 @@ func (h *WebSocketHandler) MarkNotificationAsRead(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Notification marked as read"})
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Notification marked as read",
+	})
 }
 
-// MarkAllNotificationsAsRead handles PUT /api/notifications/read-all
-func (h *WebSocketHandler) MarkAllNotificationsAsRead(c *gin.Context) {
-	userIDInterface, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
-		return
-	}
-
-	userID, ok := userIDInterface.(uint)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID"})
-		return
-	}
-
-	err := h.notificationService.MarkAllAsRead(userID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to mark all notifications as read",
-			"details": err.Error(),
+// DeleteNotification deletes a notification
+func (h *WebSocketHandler) DeleteNotification(c *gin.Context) {
+	userID := c.GetString("user_id")
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "User not authenticated",
 		})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "All notifications marked as read"})
-}
-
-// DeleteNotification handles DELETE /api/notifications/:id
-func (h *WebSocketHandler) DeleteNotification(c *gin.Context) {
-	userIDInterface, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+	notificationID := c.Param("id")
+	if notificationID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Notification ID is required",
+		})
 		return
 	}
 
-	userID, ok := userIDInterface.(uint)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID"})
-		return
-	}
-
-	notificationIDStr := c.Param("id")
-	notificationID, err := strconv.ParseUint(notificationIDStr, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid notification ID"})
-		return
-	}
-
-	err = h.notificationService.DeleteNotification(uint(notificationID), userID)
-	if err != nil {
+	if err := h.notificationService.DeleteNotification(notificationID, userID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to delete notification",
 			"details": err.Error(),
@@ -272,86 +130,44 @@ func (h *WebSocketHandler) DeleteNotification(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Notification deleted"})
-}
-
-// GetNotificationStats handles GET /api/notifications/stats
-func (h *WebSocketHandler) GetNotificationStats(c *gin.Context) {
-	userIDInterface, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
-		return
-	}
-
-	userID, ok := userIDInterface.(uint)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID"})
-		return
-	}
-
-	stats, err := h.notificationService.GetNotificationStats(&userID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to get notification statistics",
-			"details": err.Error(),
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"data": stats})
-}
-
-// GetAdminNotificationStats handles GET /api/admin/notifications/stats
-func (h *WebSocketHandler) GetAdminNotificationStats(c *gin.Context) {
-	stats, err := h.notificationService.GetNotificationStats(nil)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to get notification statistics",
-			"details": err.Error(),
-		})
-		return
-	}
-
-	// Add WebSocket statistics
-	wsStats := h.websocketService.GetStats()
-
 	c.JSON(http.StatusOK, gin.H{
-		"data": gin.H{
-			"notifications": stats,
-			"websocket":     wsStats,
-		},
+		"message": "Notification deleted",
 	})
 }
 
-// TestNotification handles POST /api/admin/notifications/test (for testing)
-func (h *WebSocketHandler) TestNotification(c *gin.Context) {
-	var request struct {
-		Type     string                 `json:"type" binding:"required"`
-		Title    string                 `json:"title" binding:"required"`
-		Message  string                 `json:"message" binding:"required"`
-		Priority string                 `json:"priority"`
-		UserID   *uint                  `json:"user_id"`
-		Data     map[string]interface{} `json:"data"`
+// GetConnectionStats returns websocket connection statistics
+func (h *WebSocketHandler) GetConnectionStats(c *gin.Context) {
+	stats := h.websocketService.GetConnectionStats()
+
+	c.JSON(http.StatusOK, gin.H{
+		"stats": stats,
+	})
+}
+
+// BroadcastMessage broadcasts a message to all connected users (admin only)
+func (h *WebSocketHandler) BroadcastMessage(c *gin.Context) {
+	var req struct {
+		Message string `json:"message" binding:"required"`
+		Type    string `json:"type"`
 	}
 
-	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Invalid request body",
+			"details": err.Error(),
+		})
 		return
 	}
 
-	priority := models.PriorityNormal
-	if request.Priority != "" {
-		priority = models.NotificationPriority(request.Priority)
+	if err := h.websocketService.BroadcastToAll([]byte(req.Message)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to broadcast message",
+			"details": err.Error(),
+		})
+		return
 	}
 
-	// Create test notification
-	if request.UserID != nil {
-		h.notificationService.CreateUserNotification(*request.UserID,
-			models.NotificationType(request.Type), request.Title, request.Message, request.Data)
-	} else {
-		h.notificationService.CreateSystemNotification(
-			models.NotificationType(request.Type), request.Title, request.Message, priority, request.Data)
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Test notification sent"})
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Message broadcasted successfully",
+	})
 }

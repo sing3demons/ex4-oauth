@@ -35,7 +35,7 @@ type CreateClientRequest struct {
 
 // ClientResponse represents OAuth2 client response
 type ClientResponse struct {
-	ID           uint     `json:"id"`
+	ID           string   `json:"id"`
 	ClientID     string   `json:"client_id"`
 	ClientSecret string   `json:"client_secret,omitempty"` // Only shown on creation
 	Name         string   `json:"name"`
@@ -174,14 +174,13 @@ func (h *OAuth2ClientHandler) GetClient(c *gin.Context) {
 		return
 	}
 
-	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil {
+	id := c.Param("id")
+	if id == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid client ID"})
 		return
 	}
 
-	client, err := h.clientRepo.GetByID(uint(id))
+	client, err := h.clientRepo.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Client not found"})
 		return
@@ -213,14 +212,13 @@ func (h *OAuth2ClientHandler) UpdateClient(c *gin.Context) {
 		return
 	}
 
-	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil {
+	id := c.Param("id")
+	if id == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid client ID"})
 		return
 	}
 
-	client, err := h.clientRepo.GetByID(uint(id))
+	client, err := h.clientRepo.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Client not found"})
 		return
@@ -294,14 +292,13 @@ func (h *OAuth2ClientHandler) DeleteClient(c *gin.Context) {
 		return
 	}
 
-	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil {
+	id := c.Param("id")
+	if id == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid client ID"})
 		return
 	}
 
-	if err := h.clientRepo.Delete(uint(id)); err != nil {
+	if err := h.clientRepo.Delete(id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete client"})
 		return
 	}

@@ -18,7 +18,7 @@ import (
 
 // JWTClaims represents the JWT claims
 type JWTClaims struct {
-	UserID   uint   `json:"user_id"`
+	UserID   string `json:"user_id"`
 	Email    string `json:"email"`
 	Username string `json:"username"`
 	jwt.RegisteredClaims
@@ -371,7 +371,7 @@ func contains(s, substr string) bool {
 }
 
 // GenerateRefreshToken generates a refresh token and stores it in database
-func (j *JWTService) GenerateRefreshToken(userID uint) (string, error) {
+func (j *JWTService) GenerateRefreshToken(userID string) (string, error) {
 	// Generate random token
 	tokenBytes := make([]byte, 32)
 	_, err := rand.Read(tokenBytes)
@@ -438,7 +438,7 @@ func (j *JWTService) RefreshAccessToken(refreshTokenString string) (*TokenPair, 
 	}
 
 	// Generate new token pair
-	tokenPair, err := j.GenerateTokenPair(&refreshToken.User)
+	tokenPair, err := j.GenerateTokenPair(refreshToken.User)
 	if err != nil {
 		return nil, err
 	}
@@ -458,7 +458,7 @@ func (j *JWTService) RevokeRefreshToken(token string) error {
 }
 
 // RevokeAllUserTokens revokes all refresh tokens for a user
-func (j *JWTService) RevokeAllUserTokens(userID uint) error {
+func (j *JWTService) RevokeAllUserTokens(userID string) error {
 	return j.refreshTokenRepo.DeleteByUserID(userID)
 }
 

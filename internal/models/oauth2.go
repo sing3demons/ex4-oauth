@@ -5,61 +5,59 @@ import (
 	"encoding/base64"
 	"time"
 
-	"gorm.io/gorm"
+	"github.com/google/uuid"
 )
 
 // OAuth2Client represents an OAuth2 client application
 type OAuth2Client struct {
-	ID              uint           `json:"id" gorm:"primaryKey"`
-	ClientID        string         `json:"client_id" gorm:"unique;not null"`
-	ClientSecret    string         `json:"-" gorm:"not null"` // Never expose in JSON
-	Name            string         `json:"name" gorm:"not null"`
-	Description     string         `json:"description"`
-	RedirectURIs    []string       `json:"redirect_uris" gorm:"-"`         // Will be stored as string and converted
-	RedirectURIsStr string         `json:"-" gorm:"column:redirect_uris"`  // JSON string in DB
-	Scopes          []string       `json:"scopes" gorm:"-"`                // Will be stored as string and converted
-	ScopesStr       string         `json:"-" gorm:"column:scopes"`         // JSON string in DB
-	GrantTypes      []string       `json:"grant_types" gorm:"-"`           // authorization_code, refresh_token
-	GrantTypesStr   string         `json:"-" gorm:"column:grant_types"`    // JSON string in DB
-	IsPublic        bool           `json:"is_public" gorm:"default:false"` // Public clients (no client secret required)
-	IsActive        bool           `json:"is_active" gorm:"default:true"`
-	CreatedAt       time.Time      `json:"created_at"`
-	UpdatedAt       time.Time      `json:"updated_at"`
-	DeletedAt       gorm.DeletedAt `json:"-" gorm:"index"`
+	ID           string    `json:"id" bson:"_id,omitempty"`
+	ClientID     string    `json:"client_id" bson:"client_id"`
+	ClientSecret string    `json:"-" bson:"client_secret"` // Never expose in JSON
+	Name         string    `json:"name" bson:"name"`
+	Description  string    `json:"description" bson:"description"`
+	RedirectURIs []string  `json:"redirect_uris" bson:"redirect_uris"`
+	Scopes       []string  `json:"scopes" bson:"scopes"`
+	GrantTypes   []string  `json:"grant_types" bson:"grant_types"` // authorization_code, refresh_token
+	IsPublic     bool      `json:"is_public" bson:"is_public"`     // Public clients (no client secret required)
+	IsActive     bool      `json:"is_active" bson:"is_active"`
+	CreatedAt    time.Time `json:"created_at" bson:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at" bson:"updated_at"`
 }
 
 // OAuth2AuthorizationCode represents an authorization code
 type OAuth2AuthorizationCode struct {
-	ID              uint      `json:"id" gorm:"primaryKey"`
-	Code            string    `json:"code" gorm:"unique;not null"`
-	ClientID        string    `json:"client_id" gorm:"not null"`
-	UserID          uint      `json:"user_id" gorm:"not null"`
-	RedirectURI     string    `json:"redirect_uri" gorm:"not null"`
-	Scope           string    `json:"scope"`
-	CodeChallenge   string    `json:"code_challenge"`   // For PKCE
-	ChallengeMethod string    `json:"challenge_method"` // S256 or plain
-	Nonce           string    `json:"nonce"`            // For OIDC
-	ExpiresAt       time.Time `json:"expires_at" gorm:"not null"`
-	Used            bool      `json:"used" gorm:"default:false"`
-	CreatedAt       time.Time `json:"created_at"`
-	User            User      `json:"user" gorm:"foreignKey:UserID"`
+	ID              string    `json:"id" bson:"_id,omitempty"`
+	Code            string    `json:"code" bson:"code"`
+	ClientID        string    `json:"client_id" bson:"client_id"`
+	UserID          string    `json:"user_id" bson:"user_id"`
+	RedirectURI     string    `json:"redirect_uri" bson:"redirect_uri"`
+	Scope           string    `json:"scope" bson:"scope"`
+	CodeChallenge   string    `json:"code_challenge" bson:"code_challenge"`     // For PKCE
+	ChallengeMethod string    `json:"challenge_method" bson:"challenge_method"` // S256 or plain
+	Nonce           string    `json:"nonce" bson:"nonce"`                       // For OIDC
+	ExpiresAt       time.Time `json:"expires_at" bson:"expires_at"`
+	Used            bool      `json:"used" bson:"used"`
+	CreatedAt       time.Time `json:"created_at" bson:"created_at"`
+	User            *User     `json:"user,omitempty" bson:"-"` // Populated during queries if needed
 }
 
 // OAuth2AccessToken represents an access token
 type OAuth2AccessToken struct {
-	ID        uint           `json:"id" gorm:"primaryKey"`
-	Token     string         `json:"token" gorm:"unique;not null"`
-	ClientID  string         `json:"client_id" gorm:"not null"`
-	UserID    uint           `json:"user_id" gorm:"not null"`
-	Scope     string         `json:"scope"`
-	ExpiresAt time.Time      `json:"expires_at" gorm:"not null"`
-	CreatedAt time.Time      `json:"created_at"`
-	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
-	User      User           `json:"user" gorm:"foreignKey:UserID"`
+	ID        string    `json:"id" bson:"_id,omitempty"`
+	Token     string    `json:"token" bson:"token"`
+	ClientID  string    `json:"client_id" bson:"client_id"`
+	UserID    string    `json:"user_id" bson:"user_id"`
+	Scope     string    `json:"scope" bson:"scope"`
+	ExpiresAt time.Time `json:"expires_at" bson:"expires_at"`
+	CreatedAt time.Time `json:"created_at" bson:"created_at"`
+	User      *User     `json:"user,omitempty" bson:"-"` // Populated during queries if needed
 }
 
-// BeforeCreate generates client ID and secret
-func (c *OAuth2Client) BeforeCreate(tx *gorm.DB) error {
+// SetDefaults sets default values for OAuth2Client
+func (c *OAuth2Client) SetDefaults() {
+	if c.ID == "" {
+		c.ID = uuid.New().String()
+	}
 	if c.ClientID == "" {
 		c.ClientID = generateRandomString(32)
 	}
@@ -67,16 +65,19 @@ func (c *OAuth2Client) BeforeCreate(tx *gorm.DB) error {
 	if !c.IsPublic && c.ClientSecret == "" {
 		c.ClientSecret = generateRandomString(64)
 	}
-	return nil
+	if c.CreatedAt.IsZero() {
+		c.CreatedAt = time.Now()
+	}
+	c.UpdatedAt = time.Now()
 }
 
 // OAuth2ClientRepository defines the interface for OAuth2 client data access
 type OAuth2ClientRepository interface {
 	Create(client *OAuth2Client) error
-	GetByID(id uint) (*OAuth2Client, error)
+	GetByID(id string) (*OAuth2Client, error)
 	GetByClientID(clientID string) (*OAuth2Client, error)
 	Update(client *OAuth2Client) error
-	Delete(id uint) error
+	Delete(id string) error
 	List(limit, offset int) ([]*OAuth2Client, error)
 	ValidateClientCredentials(clientID, clientSecret string) (*OAuth2Client, error)
 	ValidatePublicClient(clientID string) (*OAuth2Client, error)
@@ -94,9 +95,9 @@ type OAuth2AuthorizationCodeRepository interface {
 type OAuth2AccessTokenRepository interface {
 	Create(token *OAuth2AccessToken) error
 	GetByToken(token string) (*OAuth2AccessToken, error)
-	GetByUserAndClient(userID uint, clientID string) ([]*OAuth2AccessToken, error)
+	GetByUserAndClient(userID string, clientID string) ([]*OAuth2AccessToken, error)
 	Delete(token string) error
-	DeleteByUserAndClient(userID uint, clientID string) error
+	DeleteByUserAndClient(userID string, clientID string) error
 	CleanupExpiredTokens() error
 }
 
