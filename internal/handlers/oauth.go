@@ -747,6 +747,7 @@ func (h *OAuthHandler) LoginAndAuthorize(c *gin.Context) {
 		ChallengeMethod: challengeMethod,
 		Nonce:           nonce,
 		ExpiresAt:       time.Now().Add(10 * time.Minute),
+		State:           state,
 	}
 
 	if err := h.authCodeRepo.Create(authCode); err != nil {

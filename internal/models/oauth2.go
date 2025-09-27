@@ -40,6 +40,7 @@ type OAuth2AuthorizationCode struct {
 	Used            bool      `json:"used" bson:"used"`
 	CreatedAt       time.Time `json:"created_at" bson:"created_at"`
 	User            *User     `json:"user,omitempty" bson:"-"` // Populated during queries if needed
+	State           string    `json:"state" bson:"state"`      // "login", "consent"
 }
 
 // OAuth2AccessToken represents an access token
